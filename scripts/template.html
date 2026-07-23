@@ -71,6 +71,62 @@
     color: var(--text-primary);
     min-width: 180px;
   }
+
+  /* Multi-select com checkboxes */
+  .multiselect { position: relative; min-width: 200px; }
+  .multiselect-btn {
+    width: 100%;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--baseline);
+    background: var(--surface-1);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .multiselect-btn:after { content: "▾"; color: var(--text-muted); font-size: 11px; }
+  .multiselect-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 100%;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    z-index: 20;
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+  .multiselect.open .multiselect-panel { display: block; }
+  .multiselect-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .multiselect-option:hover { background: var(--slicer-bg); }
+  .multiselect-option input { accent-color: var(--brand); cursor: pointer; }
+  .multiselect-divider { border-top: 1px solid var(--gridline); margin: 4px 0; }
+  .multiselect-action {
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--brand);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .multiselect-action:hover { text-decoration: underline; }
   .stat-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
   .stat-tile {
     flex: 1 1 160px;
@@ -182,7 +238,7 @@
     <div class="card filters">
       <div class="filter-group">
         <label for="lotesSetor">Setor</label>
-        <select id="lotesSetor"></select>
+        <div class="multiselect" id="lotesSetor"></div>
       </div>
       <div class="filter-group">
         <label for="lotesProduto">Produto</label>
@@ -254,6 +310,73 @@ function fatiaPeriodo(arr, periodo) {
   if (periodo === 'all') return arr;
   return arr.slice(-parseInt(periodo, 10));
 }
+
+// ---------------------------------------------------------------
+// Componente: multi-seleção com checkboxes
+// ---------------------------------------------------------------
+function createMultiSelect(containerId, options, allSelectedByDefault) {
+  const container = document.getElementById(containerId);
+  let selected = new Set(allSelectedByDefault ? options : []);
+  let onChangeCb = null;
+
+  function label() {
+    if (selected.size === 0) return 'Nenhum selecionado';
+    if (selected.size === options.length) return 'Todos';
+    if (selected.size <= 2) return [...selected].join(', ');
+    return `${selected.size} selecionados`;
+  }
+
+  function render() {
+    container.innerHTML = `
+      <button type="button" class="multiselect-btn"><span class="ms-label">${label()}</span></button>
+      <div class="multiselect-panel">
+        <div class="multiselect-action" data-action="all">Selecionar todos</div>
+        <div class="multiselect-action" data-action="none">Limpar seleção</div>
+        <div class="multiselect-divider"></div>
+        ${options.map(o => `
+          <label class="multiselect-option">
+            <input type="checkbox" value="${o}" ${selected.has(o) ? 'checked' : ''}>
+            <span>${o}</span>
+          </label>`).join('')}
+      </div>`;
+
+    container.querySelector('.multiselect-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.multiselect.open').forEach(el => {
+        if (el !== container) el.classList.remove('open');
+      });
+      container.classList.toggle('open');
+    });
+    container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) selected.add(cb.value); else selected.delete(cb.value);
+        container.querySelector('.ms-label').textContent = label();
+        if (onChangeCb) onChangeCb();
+      });
+    });
+    container.querySelector('[data-action="all"]').addEventListener('click', () => {
+      selected = new Set(options);
+      render();
+      if (onChangeCb) onChangeCb();
+    });
+    container.querySelector('[data-action="none"]').addEventListener('click', () => {
+      selected = new Set();
+      render();
+      if (onChangeCb) onChangeCb();
+    });
+  }
+
+  render();
+
+  return {
+    getSelected: () => selected,
+    onChange: (cb) => { onChangeCb = cb; },
+  };
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.multiselect.open').forEach(el => el.classList.remove('open'));
+});
 
 // =================================================================
 // PÁGINA 1 — VISÃO GERAL
@@ -397,22 +520,21 @@ document.getElementById('familiaPeriodo').addEventListener('change', renderFamil
 // =================================================================
 // PÁGINA 3 — LOTES E VALIDADE
 // =================================================================
-const lotesSetorSelect = document.getElementById('lotesSetor');
+const lotesSetorMultiselect = createMultiSelect('lotesSetor', DATA.filtros.setores, true);
 const lotesProdutoSelect = document.getElementById('lotesProduto');
 const lotesDataSelect = document.getElementById('lotesData');
 
-lotesSetorSelect.innerHTML = '<option value="">Todos</option>' +
-  DATA.filtros.setores.map(s => `<option value="${s}">${s}</option>`).join('');
 lotesDataSelect.innerHTML = DATA.filtros.datas.map(d => `<option value="${d}">${d}</option>`).join('');
 lotesDataSelect.value = DATA.filtros.datas[DATA.filtros.datas.length - 1];
 
 function popularProdutosLotes() {
-  const setor = lotesSetorSelect.value;
-  const produtos = DATA.filtros.produtos.filter(p => !setor || p.setor === setor);
+  const setoresSelecionados = lotesSetorMultiselect.getSelected();
+  const produtos = DATA.filtros.produtos.filter(p => setoresSelecionados.has(p.setor));
   lotesProdutoSelect.innerHTML = '<option value="">Todos</option>' +
     produtos.map(p => `<option value="${p.codigo}">${p.nome}</option>`).join('');
 }
 popularProdutosLotes();
+lotesSetorMultiselect.onChange(() => { popularProdutosLotes(); renderLotes(); });
 
 function badgeValidade(pct, dias) {
   if (dias === null || dias === undefined) return '';
@@ -455,12 +577,12 @@ function montarTabela(linhas, incluirPctValidade) {
 }
 
 function renderLotes() {
-  const setor = lotesSetorSelect.value;
+  const setoresSelecionados = lotesSetorMultiselect.getSelected();
   const produto = lotesProdutoSelect.value;
   const data = lotesDataSelect.value;
 
   const todos = (DATA.lotes_por_data[data] || []).filter(l =>
-    (!setor || l.setor === setor) && (!produto || l.produto === produto)
+    setoresSelecionados.has(l.setor) && (!produto || l.produto === produto)
   );
 
   const saldoUnTotal = todos.reduce((acc, l) => acc + l.saldo_un, 0);
@@ -496,7 +618,6 @@ function renderLotes() {
   document.getElementById('tabelaVencidos').innerHTML = montarTabela(vencidos, true);
 }
 
-lotesSetorSelect.addEventListener('change', () => { popularProdutosLotes(); renderLotes(); });
 lotesProdutoSelect.addEventListener('change', renderLotes);
 lotesDataSelect.addEventListener('change', renderLotes);
 
