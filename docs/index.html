@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estoque Depósito 006</title>
+<script src="./vendor/plotly.min.js"></script>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1: #2a78d6; /* blue */
+    --series-2: #eb6834; /* orange */
+    --series-3: #1baf7a; /* aqua */
+    --series-4: #eda100; /* yellow */
+    --series-5: #e87ba4; /* magenta */
+    --series-6: #008300; /* green */
+    --series-7: #4a3aa7; /* violet */
+    --series-8: #e34948; /* red */
+    --good:     #0ca30c;
+    --warning:  #fab219;
+    --serious:  #ec835a;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --series-4: #c98500;
+      --series-5: #d55181;
+      --series-6: #008300;
+      --series-7: #9085e9;
+      --series-8: #e66767;
+      --good:     #0ca30c;
+      --warning:  #fab219;
+      --serious:  #ec835a;
+      --critical: #d03b3b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page-plane);
+    color: var(--text-primary);
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 64px; }
+  header.top { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0; }
+  .subtitle { color: var(--text-secondary); font-size: 13px; }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+  }
+  .filters { display: flex; gap: 14px; flex-wrap: wrap; align-items: end; }
+  .filter-group { display: flex; flex-direction: column; gap: 6px; }
+  .filter-group label { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  select, input[type="text"] {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--baseline);
+    background: var(--surface-1);
+    color: var(--text-primary);
+    min-width: 220px;
+  }
+  .stat-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  .stat-tile {
+    flex: 1 1 160px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .stat-tile .label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .stat-tile .value { font-size: 24px; font-weight: 600; }
+  .stat-tile .delta { font-size: 13px; margin-top: 4px; }
+  .delta.up { color: var(--good); }
+  .delta.down { color: var(--critical); }
+  .delta.flat { color: var(--text-muted); }
+  h2 { font-size: 15px; margin: 0 0 12px; color: var(--text-primary); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--gridline); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .02em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+  .badge.good { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good); }
+  .badge.warning { background: color-mix(in srgb, var(--warning) 20%, transparent); color: #8a5c00; }
+  .badge.critical { background: color-mix(in srgb, var(--critical) 15%, transparent); color: var(--critical); }
+  .footer-note { color: var(--text-muted); font-size: 12px; margin-top: 24px; text-align: center; }
+  .empty { color: var(--text-muted); font-size: 13px; padding: 12px 0; }
+  #chart { width: 100%; height: 420px; }
+  @media (prefers-color-scheme: dark) {
+    .badge.warning { color: #ffd873; }
+  }
+</style>
+</head>
+<body>
+<div class="viz-root wrap">
+  <header class="top">
+    <div>
+      <h1>Estoque — Depósito 006</h1>
+      <div class="subtitle" id="geradoEm"></div>
+    </div>
+  </header>
+
+  <div class="card filters">
+    <div class="filter-group">
+      <label for="filtroFamilia">Família</label>
+      <select id="filtroFamilia"></select>
+    </div>
+    <div class="filter-group">
+      <label for="filtroProduto">Produto</label>
+      <select id="filtroProduto"></select>
+    </div>
+    <div class="filter-group">
+      <label for="filtroPeriodo">Período</label>
+      <select id="filtroPeriodo">
+        <option value="7">Última semana</option>
+        <option value="30">Último mês</option>
+        <option value="all">Tudo</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="stat-row" id="statRow"></div>
+
+  <div class="card">
+    <h2 id="chartTitle">Evolução do saldo</h2>
+    <div id="chart"></div>
+  </div>
+
+  <div class="card">
+    <h2 id="lotesTitle">Lotes em estoque (última leitura)</h2>
+    <div id="lotesTable"></div>
+  </div>
+
+  <div class="footer-note">Fonte: BD_006.xlsx — Depósito 006</div>
+</div>
+
+<script>
+const DATA = {"gerado_em": "23/07/2026 14:53", "evolucao": {"datas": ["14/07/2026", "15/07/2026", "20/07/2026", "21/07/2026", "22/07/2026", "23/07/2026"], "series": {"CREME DE RICOTA VICOSA 200G": [5591.0, 5579.0, 5445.0, 5325.0, 5323.0, 5203.0], "DOCE DE LEITE  C/ CACAU 5KG": [45.0, 45.0, 1185.0, 1185.0, 1185.0, 885.0], "DOCE DE LEITE C/ CACAU 400g": [9242.0, 8306.0, 6489.0, 6237.0, 5815.0, 5395.0], "DOCE DE LEITE C/ CAFE 400g": [7666.0, 7030.0, 5055.0, 4923.0, 4453.0, 4225.0], "DOCE DE LEITE C/ CAFE 5KG": [1.0, 1.0, 87.0, 87.0, 87.0, 87.0], "DOCE DE LEITE C/ COCO 400g": [4611.0, 2775.0, 8111.0, 8109.0, 7231.0, 6871.0], "DOCE DE LEITE VICOSA 400g": [51026.0, 46874.0, 54172.0, 52761.0, 40373.0, 37829.0], "DOCE DE LEITE VICOSA 5KG": [7032.0, 6470.0, 6514.0, 6208.0, 5836.0, 5523.0], "DOCE DE LEITE VICOSA 800g": [30282.0, 28026.0, 33970.0, 43886.0, 36380.0, 39169.0], "DOCE DE LEITE VICOSA C/ CACAU 5KG": [68.0, 68.0, 68.0, 68.0, 68.0, 68.0], "DOCE DE LEITE VICOSA ZERO ACUCAR E LACTOSE 400G": [48844.0, 47562.0, 53868.0, 58293.0, 49567.0, 46687.0], "DOCE DE LEITE VIÇOSA FORNEAVEL 5KG": [521.0, 521.0, 417.0, 317.0, 317.0, 214.0], "IOG ABACAXI COM COCO 120G": [3376.0, 3276.0, 6628.0, 6428.0, 6428.0, 6428.0], "IOG ABACAXI COM COCO 185G": [612.0, 612.0, 911.0, 899.0, 899.0, 887.0], "IOG ABACAXI COM COCO 900g": [1897.0, 1795.0, 2609.0, 2585.0, 2421.0, 2373.0], "IOG AMEIXA COM GRAOS VIDA LEVE 180G": [2165.0, 2165.0, 1804.0, 1804.0, 1744.0, 1744.0], "IOG AMEIXA COM GRAOS VIDA LEVE 500G": [2558.0, 2558.0, 2356.0, 2356.0, 2298.0, 2218.0], "IOG COCO 120g": [6563.0, 6263.0, 7113.0, 6913.0, 6813.0, 6713.0], "IOG COCO 185g": [905.0, 905.0, 867.0, 855.0, 855.0, 843.0], "IOG COCO 900g": [3344.0, 3224.0, 3034.0, 3034.0, 2884.0, 2812.0], "IOG GREGO FRUTAS VERM. 120G": [474.0, 426.0, 239.0, 239.0, 35.0, 35.0], "IOG MORANGO 120g": [39437.0, 38537.0, 35053.0, 34533.0, 33413.0, 33213.0], "IOG MORANGO 185g": [846.0, 774.0, 1818.0, 618.0, 546.0, 522.0], "IOG MORANGO 900g": [9917.0, 9557.0, 7439.0, 7241.0, 6995.0, 6839.0], "IOG NATU. DESNATADO TRIPLO ZERO 170g": [3380.0, 3236.0, 1099.0, 1099.0, 813.0, 753.0], "IOG NATURAL INTEGRAL 170g": [4395.0, 4227.0, 5474.0, 5474.0, 5182.0, 5134.0], "IOG SALADA DE FRUTA 120g": [5466.0, 5466.0, 4322.0, 4122.0, 4122.0, 4122.0], "IOG SALADA DE FRUTA 185g": [1184.0, 1184.0, 870.0, 858.0, 858.0, 834.0], "IOG SALADA DE FRUTAS 900g": [2256.0, 2154.0, 2182.0, 1912.0, 1864.0, 1768.0], "IOG VICOSA MORANGO VIDA LEVE 180G": [1461.0, 1461.0, 1256.0, 1172.0, 1052.0, 1052.0], "IOG VICOSA MORANGO VIDA LEVE 500G": [2735.0, 2711.0, 2324.0, 2308.0, 2189.0, 2109.0], "LEITE PASTEURIZADO VICOSA DESNATADO": [213.0, 93.0, 81.0, 279.0, 126.0, 143.0], "LEITE PASTEURIZADO VICOSA INTEGRAL": [5307.0, 1917.0, 2034.0, 5939.0, 2184.0, 3455.0], "LEITE PASTEURIZADO VICOSA ZERO LACTOSE 1L": [160.0, 20.0, 110.0, 260.0, 75.0, 147.0], "MANTEIGA VICOSA 200g": [5283.0, 5043.0, 6165.0, 2553.0, 2249.0, 2249.0], "MANTEIGA VICOSA 500g": [1854.0, 1686.0, 429.0, 287.0, 1254.0, 1230.0], "QUEIJO MINAS MEIA CURA VICOSA FRACIONADO": [576.68, 576.68, 503.15, 503.15, 491.84, 434.03], "QUEIJO MINAS PADRAO VICOSA FRACIONADO": [298.38, 278.75, 102.06, 102.06, 91.57, 63.43], "QUEIJO MUSSARELA VICOSA 3KG COM 2PC": [643.32, 643.32, 1654.22, 1651.08, 629.82, 629.82], "QUEIJO MUSSARELA VICOSA LANCHE": [902.56, 902.56, 655.34, 655.34, 654.38, 624.7], "REQUEIJAO VICOSA 400g": [19918.0, 19822.0, 18140.0, 17998.0, 17753.0, 17561.0], "REQUEIJAO VICOSA COPO 200G": [15096.0, 14976.0, 13899.0, 13887.0, 13707.0, 13431.0], "REQUEIJAO VICOSA LIGHT 200G": [1952.0, 1928.0, 2088.0, 2028.0, 1988.0, 1988.0]}}, "lotes": {"ultima_data": "23/07/2026", "lotes": {"CREME DE RICOTA VICOSA 200G": [{"lote": "LR00089/26", "saldo": 678.0, "fabricacao": "20/05/2026", "validade": "13/08/2026", "dias_para_vencer": 21}, {"lote": "LR00090/26", "saldo": 888.0, "fabricacao": "23/05/2026", "validade": "18/08/2026", "dias_para_vencer": 26}, {"lote": "LR00095/26", "saldo": 1137.0, "fabricacao": "28/05/2026", "validade": "25/08/2026", "dias_para_vencer": 33}, {"lote": "LR00101/26", "saldo": 1448.0, "fabricacao": "11/06/2026", "validade": "01/09/2026", "dias_para_vencer": 40}, {"lote": "LR00102/26", "saldo": 1052.0, "fabricacao": "11/06/2026", "validade": "08/09/2026", "dias_para_vencer": 47}], "DOCE DE LEITE  C/ CACAU 5KG": [{"lote": "LD00230/26", "saldo": 2.0, "fabricacao": "09/04/2026", "validade": "04/10/2026", "dias_para_vencer": 73}, {"lote": "LD00510/26", "saldo": 388.0, "fabricacao": "13/07/2026", "validade": "07/01/2027", "dias_para_vencer": 168}, {"lote": "LD00525/26", "saldo": 495.0, "fabricacao": "16/07/2026", "validade": "11/01/2027", "dias_para_vencer": 172}], "DOCE DE LEITE C/ CACAU 400g": [{"lote": "LD00509/26", "saldo": 5395.0, "fabricacao": "11/07/2026", "validade": "06/01/2027", "dias_para_vencer": 167}], "DOCE DE LEITE C/ CAFE 400g": [{"lote": "LD00508/26", "saldo": 4225.0, "fabricacao": "11/07/2026", "validade": "06/01/2027", "dias_para_vencer": 167}], "DOCE DE LEITE C/ CAFE 5KG": [{"lote": "LD00517/26", "saldo": 87.0, "fabricacao": "14/07/2026", "validade": "09/01/2027", "dias_para_vencer": 170}], "DOCE DE LEITE C/ COCO 400g": [{"lote": "LD00519/26", "saldo": 6871.0, "fabricacao": "15/07/2026", "validade": "10/01/2027", "dias_para_vencer": 171}], "DOCE DE LEITE VICOSA 400g": [{"lote": "LD00485/26", "saldo": 910.0, "fabricacao": "04/07/2026", "validade": "30/12/2026", "dias_para_vencer": 160}, {"lote": "LD00490/26", "saldo": 6650.0, "fabricacao": "07/07/2026", "validade": "02/01/2027", "dias_para_vencer": 163}, {"lote": "LD00491/26", "saldo": 5845.0, "fabricacao": "07/07/2026", "validade": "02/01/2027", "dias_para_vencer": 163}, {"lote": "LD00520/26", "saldo": 5231.0, "fabricacao": "15/07/2026", "validade": "10/01/2027", "dias_para_vencer": 171}, {"lote": "LD00523/26", "saldo": 6269.0, "fabricacao": "16/07/2026", "validade": "11/01/2027", "dias_para_vencer": 172}, {"lote": "LD00524/26", "saldo": 6416.0, "fabricacao": "16/07/2026", "validade": "11/01/2027", "dias_para_vencer": 172}, {"lote": "LD00527/26", "saldo": 6508.0, "fabricacao": "17/07/2026", "validade": "12/01/2027", "dias_para_vencer": 173}], "DOCE DE LEITE VICOSA 5KG": [{"lote": "LD00475/26", "saldo": 387.0, "fabricacao": "01/07/2026", "validade": "27/12/2026", "dias_para_vencer": 157}, {"lote": "LD00483/26", "saldo": 493.0, "fabricacao": "03/07/2026", "validade": "29/12/2026", "dias_para_vencer": 159}, {"lote": "LD00486/26", "saldo": 423.0, "fabricacao": "06/07/2026", "validade": "30/12/2026", "dias_para_vencer": 160}, {"lote": "LD00488/26", "saldo": 432.0, "fabricacao": "06/07/2026", "validade": "31/12/2026", "dias_para_vencer": 161}, {"lote": "LD00489/26", "saldo": 465.0, "fabricacao": "06/07/2026", "validade": "31/12/2026", "dias_para_vencer": 161}, {"lote": "LD00493/26", "saldo": 485.0, "fabricacao": "07/07/2026", "validade": "02/01/2027", "dias_para_vencer": 163}, {"lote": "LD00497/26", "saldo": 524.0, "fabricacao": "08/07/2026", "validade": "03/01/2027", "dias_para_vencer": 164}, {"lote": "LD00501/26", "saldo": 539.0, "fabricacao": "09/07/2026", "validade": "04/01/2027", "dias_para_vencer": 165}, {"lote": "LD00506/26", "saldo": 28.0, "fabricacao": "10/07/2026", "validade": "05/01/2027", "dias_para_vencer": 166}, {"lote": "LD00516/26", "saldo": 301.0, "fabricacao": "14/07/2026", "validade": "09/01/2027", "dias_para_vencer": 170}, {"lote": "LD00521/26", "saldo": 510.0, "fabricacao": "15/07/2026", "validade": "10/01/2027", "dias_para_vencer": 171}, {"lote": "LD00529/26", "saldo": 518.0, "fabricacao": "17/07/2026", "validade": "12/01/2027", "dias_para_vencer": 173}, {"lote": "LD00535/26", "saldo": 418.0, "fabricacao": "20/07/2026", "validade": "14/01/2027", "dias_para_vencer": 175}], "DOCE DE LEITE VICOSA 800g": [{"lote": "LD00381/26", "saldo": 72.0, "fabricacao": "30/05/2026", "validade": "25/11/2026", "dias_para_vencer": 125}, {"lote": "LD00500/26", "saldo": 2241.0, "fabricacao": "09/07/2026", "validade": "04/01/2027", "dias_para_vencer": 165}, {"lote": "LD00503/26", "saldo": 3442.0, "fabricacao": "10/07/2026", "validade": "05/01/2027", "dias_para_vencer": 166}, {"lote": "LD00504/26", "saldo": 2988.0, "fabricacao": "10/07/2026", "validade": "05/01/2027", "dias_para_vencer": 166}, {"lote": "LD00505/26", "saldo": 3250.0, "fabricacao": "10/07/2026", "validade": "05/01/2027", "dias_para_vencer": 166}, {"lote": "LD00515/26", "saldo": 3433.0, "fabricacao": "14/07/2026", "validade": "09/01/2027", "dias_para_vencer": 170}, {"lote": "LD00514/26", "saldo": 3522.0, "fabricacao": "14/07/2026", "validade": "09/01/2027", "dias_para_vencer": 170}, {"lote": "LD00513/26", "saldo": 3387.0, "fabricacao": "14/07/2026", "validade": "09/01/2027", "dias_para_vencer": 170}, {"lote": "LD00528/26", "saldo": 3205.0, "fabricacao": "17/07/2026", "validade": "12/01/2027", "dias_para_vencer": 173}, {"lote": "LD00533/26", "saldo": 3454.0, "fabricacao": "18/07/2026", "validade": "13/01/2027", "dias_para_vencer": 174}, {"lote": "LD00531/26", "saldo": 3452.0, "fabricacao": "18/07/2026", "validade": "13/01/2027", "dias_para_vencer": 174}, {"lote": "LD00532/26", "saldo": 3094.0, "fabricacao": "18/07/2026", "validade": "13/01/2027", "dias_para_vencer": 174}, {"lote": "LD00534/26", "saldo": 3629.0, "fabricacao": "20/07/2026", "validade": "14/01/2027", "dias_para_vencer": 175}], "DOCE DE LEITE VICOSA C/ CACAU 5KG": [{"lote": "LD00280/26", "saldo": 2.0, "fabricacao": "29/04/2026", "validade": "24/10/2026", "dias_para_vencer": 93}, {"lote": "LD00393/26", "saldo": 66.0, "fabricacao": "05/06/2026", "validade": "30/11/2026", "dias_para_vencer": 130}], "DOCE DE LEITE VICOSA ZERO ACUCAR E LACTOSE 400G": [{"lote": "LD00484/26", "saldo": 2729.0, "fabricacao": "04/07/2026", "validade": "30/12/2026", "dias_para_vencer": 160}, {"lote": "LD00494/26", "saldo": 5473.0, "fabricacao": "08/07/2026", "validade": "03/01/2027", "dias_para_vencer": 164}, {"lote": "LD00498/26", "saldo": 5499.0, "fabricacao": "08/07/2026", "validade": "04/01/2027", "dias_para_vencer": 165}, {"lote": "LD00502/26", "saldo": 5146.0, "fabricacao": "10/07/2026", "validade": "05/01/2027", "dias_para_vencer": 166}, {"lote": "LD00507/26", "saldo": 5690.0, "fabricacao": "10/07/2026", "validade": "06/01/2027", "dias_para_vencer": 167}, {"lote": "LD00518/26", "saldo": 5554.0, "fabricacao": "14/07/2026", "validade": "10/01/2027", "dias_para_vencer": 171}, {"lote": "LD00522/26", "saldo": 5373.0, "fabricacao": "16/07/2026", "validade": "11/01/2027", "dias_para_vencer": 172}, {"lote": "LD00526/26", "saldo": 5584.0, "fabricacao": "16/07/2026", "validade": "12/01/2027", "dias_para_vencer": 173}, {"lote": "LD00530/26", "saldo": 5639.0, "fabricacao": "18/07/2026", "validade": "13/01/2027", "dias_para_vencer": 174}], "DOCE DE LEITE VIÇOSA FORNEAVEL 5KG": [{"lote": "LD00457/26", "saldo": 214.0, "fabricacao": "25/06/2026", "validade": "21/12/2026", "dias_para_vencer": 151}], "IOG ABACAXI COM COCO 120G": [{"lote": "LI00480/26", "saldo": 1956.0, "fabricacao": "10/07/2026", "validade": "23/08/2026", "dias_para_vencer": 31}, {"lote": "LI00489/26", "saldo": 4472.0, "fabricacao": "16/07/2026", "validade": "29/08/2026", "dias_para_vencer": 37}], "IOG ABACAXI COM COCO 185G": [{"lote": "LI00481/26", "saldo": 132.0, "fabricacao": "10/07/2026", "validade": "23/08/2026", "dias_para_vencer": 31}, {"lote": "LI00498/26", "saldo": 755.0, "fabricacao": "18/07/2026", "validade": "31/08/2026", "dias_para_vencer": 39}], "IOG ABACAXI COM COCO 900g": [{"lote": "LI00482/26", "saldo": 681.0, "fabricacao": "10/07/2026", "validade": "23/08/2026", "dias_para_vencer": 31}, {"lote": "LI00490/26", "saldo": 900.0, "fabricacao": "16/07/2026", "validade": "29/08/2026", "dias_para_vencer": 37}, {"lote": "LI00499/26", "saldo": 792.0, "fabricacao": "18/07/2026", "validade": "31/08/2026", "dias_para_vencer": 39}], "IOG AMEIXA COM GRAOS VIDA LEVE 180G": [{"lote": "LI00409/26", "saldo": 1051.0, "fabricacao": "12/06/2026", "validade": "26/07/2026", "dias_para_vencer": 3}, {"lote": "LI00466/26", "saldo": 693.0, "fabricacao": "06/07/2026", "validade": "17/08/2026", "dias_para_vencer": 25}], "IOG AMEIXA COM GRAOS VIDA LEVE 500G": [{"lote": "LI00410/26", "saldo": 1304.0, "fabricacao": "12/06/2026", "validade": "26/07/2026", "dias_para_vencer": 3}, {"lote": "LI00467/26", "saldo": 914.0, "fabricacao": "06/07/2026", "validade": "17/08/2026", "dias_para_vencer": 25}], "IOG COCO 120g": [{"lote": "LI00457/26", "saldo": 2248.0, "fabricacao": "03/07/2026", "validade": "15/08/2026", "dias_para_vencer": 23}, {"lote": "LI00477/26", "saldo": 985.0, "fabricacao": "08/07/2026", "validade": "22/08/2026", "dias_para_vencer": 30}, {"lote": "LI00491/26", "saldo": 3480.0, "fabricacao": "16/07/2026", "validade": "29/08/2026", "dias_para_vencer": 37}], "IOG COCO 185g": [{"lote": "LI00476/26", "saldo": 341.0, "fabricacao": "08/07/2026", "validade": "22/08/2026", "dias_para_vencer": 30}, {"lote": "LI00492/26", "saldo": 502.0, "fabricacao": "16/07/2026", "validade": "29/08/2026", "dias_para_vencer": 37}], "IOG COCO 900g": [{"lote": "LI00413/26", "saldo": 148.0, "fabricacao": "15/06/2026", "validade": "27/07/2026", "dias_para_vencer": 4}, {"lote": "LI00432/26", "saldo": 235.0, "fabricacao": "20/06/2026", "validade": "03/08/2026", "dias_para_vencer": 11}, {"lote": "LI00459/26", "saldo": 35.0, "fabricacao": "03/07/2026", "validade": "15/08/2026", "dias_para_vencer": 23}, {"lote": "LI00478/26", "saldo": 984.0, "fabricacao": "09/07/2026", "validade": "22/08/2026", "dias_para_vencer": 30}, {"lote": "LI00493/26", "saldo": 1410.0, "fabricacao": "16/07/2026", "validade": "29/08/2026", "dias_para_vencer": 37}], "IOG GREGO FRUTAS VERM. 120G": [{"lote": "LI00463/26", "saldo": 35.0, "fabricacao": "03/07/2026", "validade": "16/08/2026", "dias_para_vencer": 24}], "IOG MORANGO 120g": [{"lote": "LI00454/26", "saldo": 2499.0, "fabricacao": "03/07/2026", "validade": "15/08/2026", "dias_para_vencer": 23}, {"lote": "LI00469/26", "saldo": 8000.0, "fabricacao": "08/07/2026", "validade": "21/08/2026", "dias_para_vencer": 29}, {"lote": "LI00474/26", "saldo": 8278.0, "fabricacao": "09/07/2026", "validade": "22/08/2026", "dias_para_vencer": 30}, {"lote": "LI00484/26", "saldo": 6416.0, "fabricacao": "15/07/2026", "validade": "28/08/2026", "dias_para_vencer": 36}, {"lote": "LI00494/26", "saldo": 8020.0, "fabricacao": "18/07/2026", "validade": "30/08/2026", "dias_para_vencer": 38}], "IOG MORANGO 185g": [{"lote": "LI00495/26", "saldo": 522.0, "fabricacao": "18/07/2026", "validade": "30/08/2026", "dias_para_vencer": 38}], "IOG MORANGO 900g": [{"lote": "LI00429/26", "saldo": 431.0, "fabricacao": "19/06/2026", "validade": "02/08/2026", "dias_para_vencer": 10}, {"lote": "LI00450/26", "saldo": 489.0, "fabricacao": "01/07/2026", "validade": "14/08/2026", "dias_para_vencer": 22}, {"lote": "LI00456/26", "saldo": 2755.0, "fabricacao": "03/07/2026", "validade": "15/08/2026", "dias_para_vencer": 23}, {"lote": "LI00470/26", "saldo": 1025.0, "fabricacao": "08/07/2026", "validade": "21/08/2026", "dias_para_vencer": 29}, {"lote": "LI00485/26", "saldo": 1667.0, "fabricacao": "15/07/2026", "validade": "28/08/2026", "dias_para_vencer": 36}, {"lote": "LI00496/26", "saldo": 472.0, "fabricacao": "18/07/2026", "validade": "30/08/2026", "dias_para_vencer": 38}], "IOG NATU. DESNATADO TRIPLO ZERO 170g": [{"lote": "LI00483/26", "saldo": 753.0, "fabricacao": "10/07/2026", "validade": "23/08/2026", "dias_para_vencer": 31}], "IOG NATURAL INTEGRAL 170g": [{"lote": "LI00479/26", "saldo": 1488.0, "fabricacao": "09/07/2026", "validade": "22/08/2026", "dias_para_vencer": 30}, {"lote": "LI00497/26", "saldo": 3646.0, "fabricacao": "18/07/2026", "validade": "30/08/2026", "dias_para_vencer": 38}], "IOG SALADA DE FRUTA 120g": [{"lote": "LI00451/26", "saldo": 606.0, "fabricacao": "01/07/2026", "validade": "14/08/2026", "dias_para_vencer": 22}, {"lote": "LI00471/26", "saldo": 2250.0, "fabricacao": "08/07/2026", "validade": "21/08/2026", "dias_para_vencer": 29}, {"lote": "LI00486/26", "saldo": 1266.0, "fabricacao": "15/07/2026", "validade": "28/08/2026", "dias_para_vencer": 36}], "IOG SALADA DE FRUTA 185g": [{"lote": "LI00472/26", "saldo": 596.0, "fabricacao": "08/07/2026", "validade": "21/08/2026", "dias_para_vencer": 29}, {"lote": "LI00487/26", "saldo": 238.0, "fabricacao": "15/07/2026", "validade": "28/08/2026", "dias_para_vencer": 36}], "IOG SALADA DE FRUTAS 900g": [{"lote": "LI00400/26", "saldo": 65.0, "fabricacao": "10/06/2026", "validade": "24/07/2026", "dias_para_vencer": 1}, {"lote": "LI00473/26", "saldo": 330.0, "fabricacao": "08/07/2026", "validade": "21/08/2026", "dias_para_vencer": 29}, {"lote": "LI00488/26", "saldo": 1373.0, "fabricacao": "15/07/2026", "validade": "28/08/2026", "dias_para_vencer": 36}], "IOG VICOSA MORANGO VIDA LEVE 180G": [{"lote": "LI00414/26", "saldo": 659.0, "fabricacao": "15/06/2026", "validade": "27/07/2026", "dias_para_vencer": 4}, {"lote": "LI00464/26", "saldo": 393.0, "fabricacao": "06/07/2026", "validade": "17/08/2026", "dias_para_vencer": 25}], "IOG VICOSA MORANGO VIDA LEVE 500G": [{"lote": "LI00415/26", "saldo": 760.0, "fabricacao": "15/06/2026", "validade": "27/07/2026", "dias_para_vencer": 4}, {"lote": "LI00465/26", "saldo": 1349.0, "fabricacao": "06/07/2026", "validade": "17/08/2026", "dias_para_vencer": 25}], "LEITE PASTEURIZADO VICOSA DESNATADO": [{"lote": "LL00261/26", "saldo": 143.0, "fabricacao": "22/07/2026", "validade": "30/07/2026", "dias_para_vencer": 7}], "LEITE PASTEURIZADO VICOSA INTEGRAL": [{"lote": "LL00150/26", "saldo": 40.0, "fabricacao": "28/04/2026", "validade": "05/05/2026", "dias_para_vencer": -79}, {"lote": "LL00259/26", "saldo": 121.0, "fabricacao": "20/07/2026", "validade": "28/07/2026", "dias_para_vencer": 5}, {"lote": "LL00262/26", "saldo": 3294.0, "fabricacao": "22/07/2026", "validade": "30/07/2026", "dias_para_vencer": 7}], "LEITE PASTEURIZADO VICOSA ZERO LACTOSE 1L": [{"lote": "LL00230/26", "saldo": 20.0, "fabricacao": "26/06/2026", "validade": "23/07/2026", "dias_para_vencer": 0}, {"lote": "LL00260/26", "saldo": 14.0, "fabricacao": "20/07/2026", "validade": "28/07/2026", "dias_para_vencer": 5}, {"lote": "LL00263/26", "saldo": 113.0, "fabricacao": "22/07/2026", "validade": "30/07/2026", "dias_para_vencer": 7}], "MANTEIGA VICOSA 200g": [{"lote": "LM00100/26", "saldo": 76.0, "fabricacao": "03/07/2026", "validade": "08/11/2026", "dias_para_vencer": 108}, {"lote": "LM00099/26", "saldo": 417.0, "fabricacao": "03/07/2026", "validade": "08/11/2026", "dias_para_vencer": 108}, {"lote": "LM00109/26", "saldo": 68.0, "fabricacao": "16/07/2026", "validade": "21/11/2026", "dias_para_vencer": 121}, {"lote": "LM00108/26", "saldo": 155.0, "fabricacao": "16/07/2026", "validade": "21/11/2026", "dias_para_vencer": 121}, {"lote": "LM00111/26", "saldo": 456.0, "fabricacao": "16/07/2026", "validade": "22/11/2026", "dias_para_vencer": 122}, {"lote": "LM00112/26", "saldo": 1077.0, "fabricacao": "16/07/2026", "validade": "22/11/2026", "dias_para_vencer": 122}], "MANTEIGA VICOSA 500g": [{"lote": "LM00113/26", "saldo": 118.0, "fabricacao": "16/07/2026", "validade": "22/11/2026", "dias_para_vencer": 122}, {"lote": "LM00114/26", "saldo": 545.0, "fabricacao": "21/07/2026", "validade": "24/11/2026", "dias_para_vencer": 124}, {"lote": "LM00115/26", "saldo": 567.0, "fabricacao": "21/07/2026", "validade": "24/11/2026", "dias_para_vencer": 124}], "QUEIJO MINAS MEIA CURA VICOSA FRACIONADO": [{"lote": "LQ00066/26", "saldo": 105.44, "fabricacao": "16/05/2026", "validade": "11/09/2026", "dias_para_vencer": 50}, {"lote": "LQ00068/26", "saldo": 173.0, "fabricacao": "26/05/2026", "validade": "17/09/2026", "dias_para_vencer": 56}, {"lote": "LQ00075/26", "saldo": 155.59, "fabricacao": "05/06/2026", "validade": "29/09/2026", "dias_para_vencer": 68}], "QUEIJO MINAS PADRAO VICOSA FRACIONADO": [{"lote": "LQ00079/26", "saldo": 63.43, "fabricacao": "09/06/2026", "validade": "06/10/2026", "dias_para_vencer": 75}], "QUEIJO MUSSARELA VICOSA 3KG COM 2PC": [{"lote": "LQ00109/26", "saldo": 136.68, "fabricacao": "14/07/2026", "validade": "09/10/2026", "dias_para_vencer": 78}, {"lote": "LQ00112/26", "saldo": 493.14, "fabricacao": "16/07/2026", "validade": "14/10/2026", "dias_para_vencer": 83}], "QUEIJO MUSSARELA VICOSA LANCHE": [{"lote": "LQ00085/26", "saldo": 232.99, "fabricacao": "02/06/2026", "validade": "30/08/2026", "dias_para_vencer": 38}, {"lote": "LQ00099/26", "saldo": 190.54, "fabricacao": "16/06/2026", "validade": "09/09/2026", "dias_para_vencer": 48}, {"lote": "LQ00103/26", "saldo": 201.17, "fabricacao": "16/06/2026", "validade": "11/09/2026", "dias_para_vencer": 50}], "REQUEIJAO VICOSA 400g": [{"lote": "LR00104/26", "saldo": 1176.0, "fabricacao": "12/06/2026", "validade": "19/09/2026", "dias_para_vencer": 58}, {"lote": "LR00107/26", "saldo": 1742.0, "fabricacao": "16/06/2026", "validade": "23/09/2026", "dias_para_vencer": 62}, {"lote": "LR00112/26", "saldo": 2192.0, "fabricacao": "26/06/2026", "validade": "02/10/2026", "dias_para_vencer": 71}, {"lote": "LR00115/26", "saldo": 2761.0, "fabricacao": "03/07/2026", "validade": "10/10/2026", "dias_para_vencer": 79}, {"lote": "LR00117/26", "saldo": 3145.0, "fabricacao": "07/07/2026", "validade": "14/10/2026", "dias_para_vencer": 83}, {"lote": "LR00119/26", "saldo": 4198.0, "fabricacao": "10/07/2026", "validade": "15/10/2026", "dias_para_vencer": 84}, {"lote": "LR00122/26", "saldo": 2347.0, "fabricacao": "18/07/2026", "validade": "24/10/2026", "dias_para_vencer": 93}], "REQUEIJAO VICOSA COPO 200G": [{"lote": "LR00105/26", "saldo": 1718.0, "fabricacao": "16/06/2026", "validade": "23/09/2026", "dias_para_vencer": 62}, {"lote": "LR00109/26", "saldo": 3925.0, "fabricacao": "19/06/2026", "validade": "26/09/2026", "dias_para_vencer": 65}, {"lote": "LR00111/26", "saldo": 401.0, "fabricacao": "26/06/2026", "validade": "02/10/2026", "dias_para_vencer": 71}, {"lote": "LR00114/26", "saldo": 2166.0, "fabricacao": "03/07/2026", "validade": "10/10/2026", "dias_para_vencer": 79}, {"lote": "LR00116/26", "saldo": 2449.0, "fabricacao": "07/07/2026", "validade": "14/10/2026", "dias_para_vencer": 83}, {"lote": "LR00121/26", "saldo": 2772.0, "fabricacao": "18/07/2026", "validade": "24/10/2026", "dias_para_vencer": 93}], "REQUEIJAO VICOSA LIGHT 200G": [{"lote": "LR00098/26", "saldo": 188.0, "fabricacao": "30/05/2026", "validade": "26/08/2026", "dias_para_vencer": 34}, {"lote": "LR00108/26", "saldo": 114.0, "fabricacao": "19/06/2026", "validade": "15/09/2026", "dias_para_vencer": 54}, {"lote": "LR00113/26", "saldo": 523.0, "fabricacao": "03/07/2026", "validade": "30/09/2026", "dias_para_vencer": 69}, {"lote": "LR00118/26", "saldo": 583.0, "fabricacao": "08/07/2026", "validade": "05/10/2026", "dias_para_vencer": 74}, {"lote": "LR00120/26", "saldo": 580.0, "fabricacao": "18/07/2026", "validade": "14/10/2026", "dias_para_vencer": 83}]}}, "resumo": [{"produto": "CREME DE RICOTA VICOSA 200G", "familia": "009", "saldo_atual": 5203.0, "saldo_anterior": 5323.0, "variacao": -120.0}, {"produto": "DOCE DE LEITE  C/ CACAU 5KG", "familia": "005", "saldo_atual": 885.0, "saldo_anterior": 1185.0, "variacao": -300.0}, {"produto": "DOCE DE LEITE C/ CACAU 400g", "familia": "005", "saldo_atual": 5395.0, "saldo_anterior": 5815.0, "variacao": -420.0}, {"produto": "DOCE DE LEITE C/ CAFE 400g", "familia": "005", "saldo_atual": 4225.0, "saldo_anterior": 4453.0, "variacao": -228.0}, {"produto": "DOCE DE LEITE C/ CAFE 5KG", "familia": "005", "saldo_atual": 87.0, "saldo_anterior": 87.0, "variacao": 0.0}, {"produto": "DOCE DE LEITE C/ COCO 400g", "familia": "005", "saldo_atual": 6871.0, "saldo_anterior": 7231.0, "variacao": -360.0}, {"produto": "DOCE DE LEITE VICOSA 400g", "familia": "005", "saldo_atual": 37829.0, "saldo_anterior": 40373.0, "variacao": -2544.0}, {"produto": "DOCE DE LEITE VICOSA 5KG", "familia": "005", "saldo_atual": 5523.0, "saldo_anterior": 5836.0, "variacao": -313.0}, {"produto": "DOCE DE LEITE VICOSA 800g", "familia": "005", "saldo_atual": 39169.0, "saldo_anterior": 36380.0, "variacao": 2789.0}, {"produto": "DOCE DE LEITE VICOSA C/ CACAU 5KG", "familia": "005", "saldo_atual": 68.0, "saldo_anterior": 68.0, "variacao": 0.0}, {"produto": "DOCE DE LEITE VICOSA ZERO ACUCAR E LACTOSE 400G", "familia": "005", "saldo_atual": 46687.0, "saldo_anterior": 49567.0, "variacao": -2880.0}, {"produto": "DOCE DE LEITE VIÇOSA FORNEAVEL 5KG", "familia": "005", "saldo_atual": 214.0, "saldo_anterior": 317.0, "variacao": -103.0}, {"produto": "IOG ABACAXI COM COCO 120G", "familia": "003", "saldo_atual": 6428.0, "saldo_anterior": 6428.0, "variacao": 0.0}, {"produto": "IOG ABACAXI COM COCO 185G", "familia": "003", "saldo_atual": 887.0, "saldo_anterior": 899.0, "variacao": -12.0}, {"produto": "IOG ABACAXI COM COCO 900g", "familia": "003", "saldo_atual": 2373.0, "saldo_anterior": 2421.0, "variacao": -48.0}, {"produto": "IOG AMEIXA COM GRAOS VIDA LEVE 180G", "familia": "003", "saldo_atual": 1744.0, "saldo_anterior": 1744.0, "variacao": 0.0}, {"produto": "IOG AMEIXA COM GRAOS VIDA LEVE 500G", "familia": "003", "saldo_atual": 2218.0, "saldo_anterior": 2298.0, "variacao": -80.0}, {"produto": "IOG COCO 120g", "familia": "003", "saldo_atual": 6713.0, "saldo_anterior": 6813.0, "variacao": -100.0}, {"produto": "IOG COCO 185g", "familia": "003", "saldo_atual": 843.0, "saldo_anterior": 855.0, "variacao": -12.0}, {"produto": "IOG COCO 900g", "familia": "003", "saldo_atual": 2812.0, "saldo_anterior": 2884.0, "variacao": -72.0}, {"produto": "IOG GREGO FRUTAS VERM. 120G", "familia": "003", "saldo_atual": 35.0, "saldo_anterior": 35.0, "variacao": 0.0}, {"produto": "IOG MORANGO 120g", "familia": "003", "saldo_atual": 33213.0, "saldo_anterior": 33413.0, "variacao": -200.0}, {"produto": "IOG MORANGO 185g", "familia": "003", "saldo_atual": 522.0, "saldo_anterior": 546.0, "variacao": -24.0}, {"produto": "IOG MORANGO 900g", "familia": "003", "saldo_atual": 6839.0, "saldo_anterior": 6995.0, "variacao": -156.0}, {"produto": "IOG NATU. DESNATADO TRIPLO ZERO 170g", "familia": "003", "saldo_atual": 753.0, "saldo_anterior": 813.0, "variacao": -60.0}, {"produto": "IOG NATURAL INTEGRAL 170g", "familia": "003", "saldo_atual": 5134.0, "saldo_anterior": 5182.0, "variacao": -48.0}, {"produto": "IOG SALADA DE FRUTA 120g", "familia": "003", "saldo_atual": 4122.0, "saldo_anterior": 4122.0, "variacao": 0.0}, {"produto": "IOG SALADA DE FRUTA 185g", "familia": "003", "saldo_atual": 834.0, "saldo_anterior": 858.0, "variacao": -24.0}, {"produto": "IOG SALADA DE FRUTAS 900g", "familia": "003", "saldo_atual": 1768.0, "saldo_anterior": 1864.0, "variacao": -96.0}, {"produto": "IOG VICOSA MORANGO VIDA LEVE 180G", "familia": "003", "saldo_atual": 1052.0, "saldo_anterior": 1052.0, "variacao": 0.0}, {"produto": "IOG VICOSA MORANGO VIDA LEVE 500G", "familia": "003", "saldo_atual": 2109.0, "saldo_anterior": 2189.0, "variacao": -80.0}, {"produto": "LEITE PASTEURIZADO VICOSA DESNATADO", "familia": "008", "saldo_atual": 143.0, "saldo_anterior": 126.0, "variacao": 17.0}, {"produto": "LEITE PASTEURIZADO VICOSA INTEGRAL", "familia": "008", "saldo_atual": 3455.0, "saldo_anterior": 2184.0, "variacao": 1271.0}, {"produto": "LEITE PASTEURIZADO VICOSA ZERO LACTOSE 1L", "familia": "008", "saldo_atual": 147.0, "saldo_anterior": 75.0, "variacao": 72.0}, {"produto": "MANTEIGA VICOSA 200g", "familia": "006", "saldo_atual": 2249.0, "saldo_anterior": 2249.0, "variacao": 0.0}, {"produto": "MANTEIGA VICOSA 500g", "familia": "006", "saldo_atual": 1230.0, "saldo_anterior": 1254.0, "variacao": -24.0}, {"produto": "QUEIJO MINAS MEIA CURA VICOSA FRACIONADO", "familia": "007", "saldo_atual": 434.03, "saldo_anterior": 491.84, "variacao": -57.81}, {"produto": "QUEIJO MINAS PADRAO VICOSA FRACIONADO", "familia": "007", "saldo_atual": 63.43, "saldo_anterior": 91.57, "variacao": -28.14}, {"produto": "QUEIJO MUSSARELA VICOSA 3KG COM 2PC", "familia": "007", "saldo_atual": 629.82, "saldo_anterior": 629.82, "variacao": 0.0}, {"produto": "QUEIJO MUSSARELA VICOSA LANCHE", "familia": "007", "saldo_atual": 624.7, "saldo_anterior": 654.38, "variacao": -29.68}, {"produto": "REQUEIJAO VICOSA 400g", "familia": "009", "saldo_atual": 17561.0, "saldo_anterior": 17753.0, "variacao": -192.0}, {"produto": "REQUEIJAO VICOSA COPO 200G", "familia": "009", "saldo_atual": 13431.0, "saldo_anterior": 13707.0, "variacao": -276.0}, {"produto": "REQUEIJAO VICOSA LIGHT 200G", "familia": "009", "saldo_atual": 1988.0, "saldo_anterior": 1988.0, "variacao": 0.0}]};
+
+document.getElementById('geradoEm').textContent = 'Atualizado em ' + DATA.gerado_em;
+
+const seriesColors = ['var(--series-1)','var(--series-2)','var(--series-3)','var(--series-4)',
+                       'var(--series-5)','var(--series-6)','var(--series-7)','var(--series-8)'];
+
+function resolveVar(name) {
+  return getComputedStyle(document.querySelector('.viz-root')).getPropertyValue(name).trim();
+}
+
+// --- Monta listas de família / produto ---
+const familias = [...new Set(DATA.resumo.map(r => r.familia))].sort();
+const familiaSelect = document.getElementById('filtroFamilia');
+familiaSelect.innerHTML = '<option value="">Todas</option>' +
+  familias.map(f => `<option value="${f}">Família ${f}</option>`).join('');
+
+const produtoSelect = document.getElementById('filtroProduto');
+
+function produtosDaFamilia(familia) {
+  return DATA.resumo
+    .filter(r => !familia || r.familia === familia)
+    .map(r => r.produto)
+    .sort();
+}
+
+function popularProdutos(familia) {
+  const produtos = produtosDaFamilia(familia);
+  produtoSelect.innerHTML = produtos.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+popularProdutos('');
+
+familiaSelect.addEventListener('change', () => {
+  popularProdutos(familiaSelect.value);
+  render();
+});
+produtoSelect.addEventListener('change', render);
+document.getElementById('filtroPeriodo').addEventListener('change', render);
+
+function formatNum(n) {
+  return n.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+}
+
+function statTile(label, value, deltaLabel, deltaClass) {
+  return `
+    <div class="stat-tile">
+      <div class="label">${label}</div>
+      <div class="value">${value}</div>
+      ${deltaLabel ? `<div class="delta ${deltaClass}">${deltaLabel}</div>` : ''}
+    </div>`;
+}
+
+function badgeParaValidade(dias) {
+  if (dias === null || dias === undefined) return '';
+  if (dias < 0) return '<span class="badge critical">vencido</span>';
+  if (dias <= 7) return `<span class="badge critical">${dias} dia(s)</span>`;
+  if (dias <= 20) return `<span class="badge warning">${dias} dias</span>`;
+  return `<span class="badge good">${dias} dias</span>`;
+}
+
+function render() {
+  const produto = produtoSelect.value;
+  const periodo = document.getElementById('filtroPeriodo').value;
+
+  // --- Stat row ---
+  const info = DATA.resumo.find(r => r.produto === produto);
+  const statRow = document.getElementById('statRow');
+  if (!info) {
+    statRow.innerHTML = '<div class="empty">Selecione um produto.</div>';
+  } else {
+    const delta = info.variacao;
+    const deltaClass = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
+    const arrow = delta > 0 ? '▲' : delta < 0 ? '▼' : '—';
+    statRow.innerHTML =
+      statTile('Saldo atual', formatNum(info.saldo_atual), null, '') +
+      statTile('Saldo dia anterior', formatNum(info.saldo_anterior), null, '') +
+      statTile('Variação (1 dia)', `${arrow} ${formatNum(Math.abs(delta))}`, null, deltaClass) +
+      statTile('Família', 'Família ' + info.familia, null, '');
+  }
+
+  // --- Gráfico de evolução ---
+  document.getElementById('chartTitle').textContent = produto
+    ? `Evolução do saldo — ${produto}`
+    : 'Evolução do saldo';
+
+  let datas = DATA.evolucao.datas;
+  let valores = produto ? (DATA.evolucao.series[produto] || datas.map(() => 0)) : [];
+
+  if (periodo !== 'all') {
+    const n = parseInt(periodo, 10);
+    datas = datas.slice(-n);
+    valores = valores.slice(-n);
+  }
+
+  const trace = {
+    x: datas,
+    y: valores,
+    type: 'scatter',
+    mode: 'lines+markers',
+    line: { color: resolveVar('--series-1'), width: 2, shape: 'spline' },
+    marker: { size: 8, color: resolveVar('--series-1') },
+    fill: 'tozeroy',
+    fillcolor: resolveVar('--series-1').replace(')', ', 0.08)').replace('rgb', 'rgba'),
+    hovertemplate: '%{x}<br>Saldo: %{y:,.0f}<extra></extra>',
+  };
+
+  const layout = {
+    margin: { l: 50, r: 20, t: 10, b: 40 },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'transparent',
+    font: { family: 'system-ui, -apple-system, "Segoe UI", sans-serif', color: resolveVar('--text-secondary'), size: 12 },
+    xaxis: { gridcolor: resolveVar('--gridline'), linecolor: resolveVar('--baseline'), tickfont: { color: resolveVar('--text-muted') } },
+    yaxis: { gridcolor: resolveVar('--gridline'), linecolor: resolveVar('--baseline'), tickfont: { color: resolveVar('--text-muted') }, rangemode: 'tozero' },
+    showlegend: false,
+  };
+
+  Plotly.newPlot('chart', produto ? [trace] : [], layout, { displayModeBar: false, responsive: true });
+
+  // --- Tabela de lotes ---
+  document.getElementById('lotesTitle').textContent =
+    `Lotes em estoque — ${DATA.lotes.ultima_data}` + (produto ? ` — ${produto}` : '');
+
+  const lotes = produto ? (DATA.lotes.lotes[produto] || []) : [];
+  const tableDiv = document.getElementById('lotesTable');
+  if (!produto) {
+    tableDiv.innerHTML = '<div class="empty">Selecione um produto para ver os lotes.</div>';
+  } else if (lotes.length === 0) {
+    tableDiv.innerHTML = '<div class="empty">Sem saldo em estoque na última leitura.</div>';
+  } else {
+    tableDiv.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Lote</th>
+            <th>Fabricação</th>
+            <th>Validade</th>
+            <th class="num">Saldo</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${lotes.map(l => `
+            <tr>
+              <td>${l.lote}</td>
+              <td>${l.fabricacao}</td>
+              <td>${l.validade}</td>
+              <td class="num">${formatNum(l.saldo)}</td>
+              <td>${badgeParaValidade(l.dias_para_vencer)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+}
+
+// Seleciona o primeiro produto por padrão
+if (produtoSelect.options.length > 0) {
+  produtoSelect.selectedIndex = 0;
+}
+render();
+</script>
+</body>
+</html>
