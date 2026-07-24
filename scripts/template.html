@@ -148,6 +148,9 @@
   h2 { font-size: 14px; margin: 0 0 12px; color: var(--text-primary); font-weight: 600; }
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--gridline); }
+  th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  th.sortable:hover { color: var(--brand); }
+  th.sortable.sort-active { color: var(--brand); }
   th { color: var(--text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   tbody tr:nth-child(even) { background: #FAFAF8; }
@@ -170,7 +173,7 @@
     padding: 26px 18px; box-sizing: border-box;
   }
   .sidebar .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-  .sidebar .logo-row img { width: 52px; height: 52px; border-radius: 10px; flex-shrink: 0; }
+  .sidebar .logo-row img { width: 72px; height: 72px; border-radius: 12px; flex-shrink: 0; }
   .sidebar .logo-row h2 { font-size: 16px; margin: 0; font-weight: 700; line-height: 1.25; color: #fff; }
   .sidebar .sb-subtitle { font-size: 11.5px; color: rgba(255,255,255,0.72); margin: 4px 0 22px; }
   .sidebar a.sb-card {
@@ -198,7 +201,7 @@
   <aside class="sidebar">
     <div class="logo-row">
       <img src="../assets/logo-vicosa.png" alt="Produtos Viçosa">
-      <h2>Viçosa BI</h2>
+      <h2>Produtos Viçosa</h2>
     </div>
     <div class="sb-subtitle">Selecione um painel para acompanhar</div>
     <a class="sb-card active" href="../" title="Clique novamente para remover a seleção">
@@ -327,8 +330,7 @@
     </div>
   </section>
 
-  <div class="footer-note">Fonte: BD_006.xlsx — Depósito 006</div>
-</div>
+  </div>
   </div>
 </div>
 
@@ -351,6 +353,45 @@ function formatNum(n) {
 function formatMil(n) {
   if (n === null || n === undefined) return '-';
   return (n / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' Mil';
+}
+
+// ---------------------------------------------------------------
+// Tabelas com colunas clicáveis (ordenação) — clique 1x ordena
+// crescente pela coluna, clique de novo inverte para decrescente.
+// ---------------------------------------------------------------
+const sortState = {};
+const sortRerender = {};
+
+function registrarOrdenacao(tableId, rerenderFn) {
+  sortRerender[tableId] = rerenderFn;
+}
+
+function onSortClick(tableId, key) {
+  const st = sortState[tableId] || (sortState[tableId] = { key: null, dir: 1 });
+  if (st.key === key) { st.dir *= -1; } else { st.key = key; st.dir = 1; }
+  const fn = sortRerender[tableId];
+  if (fn) fn();
+}
+
+function ordenarLinhas(linhas, tableId, tipos) {
+  const st = sortState[tableId];
+  if (!st || !st.key) return linhas;
+  const tipo = (tipos && tipos[st.key]) || 'string';
+  return [...linhas].sort((a, b) => {
+    let va = a[st.key], vb = b[st.key];
+    if (va === null || va === undefined) return 1;
+    if (vb === null || vb === undefined) return -1;
+    const cmp = tipo === 'number' ? (va - vb) : String(va).localeCompare(String(vb), 'pt-BR');
+    return cmp * st.dir;
+  });
+}
+
+function th(label, key, tableId, extraClass) {
+  const st = sortState[tableId];
+  const ativo = st && st.key === key;
+  const seta = ativo ? (st.dir === 1 ? ' ▲' : ' ▼') : '';
+  const cls = ['sortable']; if (extraClass) cls.push(extraClass); if (ativo) cls.push('sort-active');
+  return `<th class="${cls.join(' ')}" onclick="onSortClick('${tableId}','${key}')">${label}${seta}</th>`;
 }
 
 // ---------------------------------------------------------------
@@ -668,25 +709,32 @@ function badgeValidade(pct, dias) {
   return `<span class="badge good">${dias} dia(s)</span>`;
 }
 
-function montarTabela(linhas, incluirPctValidade) {
+function montarTabela(linhas, incluirPctValidade, tableId) {
   if (linhas.length === 0) return '<div class="empty">Nenhum lote encontrado para o filtro selecionado.</div>';
+
+  const tipos = {
+    lote: 'string', nome: 'string', fabricacao_iso: 'string', validade_iso: 'string',
+    saldo_un: 'number', saldo_kg: 'number', dias_real: 'number', pct_real: 'number',
+  };
+  const linhasOrdenadas = ordenarLinhas(linhas, tableId, tipos);
+
   return `
     <table>
       <thead>
         <tr>
-          <th>Lote</th>
-          <th>Produto</th>
-          <th>Fabricação</th>
-          <th>Validade</th>
-          <th class="num">Saldo (un)</th>
-          <th class="num">Saldo (kg)</th>
-          <th class="num">Dias até Vencer</th>
-          ${incluirPctValidade ? '<th class="num">% Validade Restante</th>' : ''}
+          ${th('Lote', 'lote', tableId)}
+          ${th('Produto', 'nome', tableId)}
+          ${th('Fabricação', 'fabricacao_iso', tableId)}
+          ${th('Validade', 'validade_iso', tableId)}
+          ${th('Saldo (un)', 'saldo_un', tableId, 'num')}
+          ${th('Saldo (kg)', 'saldo_kg', tableId, 'num')}
+          ${th('Dias até Vencer', 'dias_real', tableId, 'num')}
+          ${incluirPctValidade ? th('% Validade Restante', 'pct_real', tableId, 'num') : ''}
           <th>Status</th>
         </tr>
       </thead>
       <tbody>
-        ${linhas.map(l => {
+        ${linhasOrdenadas.map(l => {
           const { dias, pct } = calcularValidadeReal(l);
           return `
           <tr>
@@ -742,10 +790,13 @@ function renderLotes() {
 
   const naoVencidos = todos.filter(l => l.dias_real === null || l.dias_real >= 0);
   document.getElementById('tabelaTodos').innerHTML = montarTabela(
-    naoVencidos.sort((a, b) => (a.dias_real ?? 9999) - (b.dias_real ?? 9999)), true
+    naoVencidos.sort((a, b) => (a.dias_real ?? 9999) - (b.dias_real ?? 9999)), true, 'tabelaTodos'
   );
-  document.getElementById('tabelaAtencao').innerHTML = montarTabela(atencao, true);
-  document.getElementById('tabelaVencidos').innerHTML = montarTabela(vencidos, true);
+  document.getElementById('tabelaAtencao').innerHTML = montarTabela(atencao, true, 'tabelaAtencao');
+  document.getElementById('tabelaVencidos').innerHTML = montarTabela(vencidos, true, 'tabelaVencidos');
+  registrarOrdenacao('tabelaTodos', renderLotes);
+  registrarOrdenacao('tabelaAtencao', renderLotes);
+  registrarOrdenacao('tabelaVencidos', renderLotes);
 }
 
 lotesDataSelect.addEventListener('change', renderLotes);

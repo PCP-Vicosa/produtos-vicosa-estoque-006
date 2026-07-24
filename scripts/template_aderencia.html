@@ -96,6 +96,9 @@
   h2 { font-size: 14px; margin: 0 0 12px; color: var(--text-primary); font-weight: 600; }
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--gridline); }
+  th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  th.sortable:hover { color: var(--brand); }
+  th.sortable.sort-active { color: var(--brand); }
   th { color: var(--text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   tbody tr:nth-child(even) { background: #FAFAF8; }
@@ -116,7 +119,7 @@
     padding: 26px 18px; box-sizing: border-box;
   }
   .sidebar .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-  .sidebar .logo-row img { width: 52px; height: 52px; border-radius: 10px; flex-shrink: 0; }
+  .sidebar .logo-row img { width: 72px; height: 72px; border-radius: 12px; flex-shrink: 0; }
   .sidebar .logo-row h2 { font-size: 16px; margin: 0; font-weight: 700; line-height: 1.25; color: #fff; }
   .sidebar .sb-subtitle { font-size: 11.5px; color: rgba(255,255,255,0.72); margin: 4px 0 22px; }
   .sidebar a.sb-card {
@@ -144,7 +147,7 @@
   <aside class="sidebar">
     <div class="logo-row">
       <img src="../assets/logo-vicosa.png" alt="Produtos Viçosa">
-      <h2>Viçosa BI</h2>
+      <h2>Produtos Viçosa</h2>
     </div>
     <div class="sb-subtitle">Selecione um painel para acompanhar</div>
     <a class="sb-card" href="../estoque-006/">
@@ -240,8 +243,7 @@
     </div>
   </section>
 
-  <div class="footer-note">Fonte: Producao_Semanal_PowerBI.xlsx</div>
-</div>
+  </div>
   </div>
 </div>
 
@@ -257,6 +259,45 @@ function resolveVar(name) {
 function fmtPct(n) { return n === null || n === undefined || isNaN(n) ? '-' : n.toFixed(2).replace('.', ',') + '%'; }
 function fmtMil(n) { return n === null || n === undefined ? '-' : (n / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' Mil'; }
 function fmtNum(n) { return n === null || n === undefined ? '-' : n.toLocaleString('pt-BR', { maximumFractionDigits: 0 }); }
+
+// ---------------------------------------------------------------
+// Tabelas com colunas clicáveis (ordenação) — clique 1x ordena
+// crescente pela coluna, clique de novo inverte para decrescente.
+// ---------------------------------------------------------------
+const sortState = {};
+const sortRerender = {};
+
+function registrarOrdenacao(tableId, rerenderFn) {
+  sortRerender[tableId] = rerenderFn;
+}
+
+function onSortClick(tableId, key) {
+  const st = sortState[tableId] || (sortState[tableId] = { key: null, dir: 1 });
+  if (st.key === key) { st.dir *= -1; } else { st.key = key; st.dir = 1; }
+  const fn = sortRerender[tableId];
+  if (fn) fn();
+}
+
+function ordenarLinhas(linhas, tableId, tipos) {
+  const st = sortState[tableId];
+  if (!st || !st.key) return linhas;
+  const tipo = (tipos && tipos[st.key]) || 'string';
+  return [...linhas].sort((a, b) => {
+    let va = a[st.key], vb = b[st.key];
+    if (va === null || va === undefined) return 1;
+    if (vb === null || vb === undefined) return -1;
+    const cmp = tipo === 'number' ? (va - vb) : String(va).localeCompare(String(vb), 'pt-BR');
+    return cmp * st.dir;
+  });
+}
+
+function th(label, key, tableId, extraClass) {
+  const st = sortState[tableId];
+  const ativo = st && st.key === key;
+  const seta = ativo ? (st.dir === 1 ? ' ▲' : ' ▼') : '';
+  const cls = ['sortable']; if (extraClass) cls.push(extraClass); if (ativo) cls.push('sort-active');
+  return `<th class="${cls.join(' ')}" onclick="onSortClick('${tableId}','${key}')">${label}${seta}</th>`;
+}
 
 function baseLayout() {
   return {
@@ -420,17 +461,24 @@ function renderGeral(regsMes) {
   document.getElementById('statRowGeral').innerHTML = statTiles(ind);
 
   const setores = [...new Set(regsMes.map(r => r.setor))].sort();
-  const linhas = setores.map(s => calcularIndicadores(regsMes.filter(r => r.setor === s)));
+  let linhasSetor = setores.map(s => ({ setor: s, ...calcularIndicadores(regsMes.filter(r => r.setor === s)) }));
+  linhasSetor = ordenarLinhas(linhasSetor, 'tabelaSetor', { setor: 'string', demXProd: 'number', demXProg: 'number', progXProd: 'number' });
 
   const tabela = `
     <table>
-      <thead><tr><th>Setor</th><th class="num">Demandado × Produzido</th><th class="num">Demandado × Programado</th><th class="num">Programado × Produzido</th></tr></thead>
+      <thead><tr>
+        ${th('Setor', 'setor', 'tabelaSetor')}
+        ${th('Demandado × Produzido', 'demXProd', 'tabelaSetor', 'num')}
+        ${th('Demandado × Programado', 'demXProg', 'tabelaSetor', 'num')}
+        ${th('Programado × Produzido', 'progXProd', 'tabelaSetor', 'num')}
+      </tr></thead>
       <tbody>
-        ${setores.map((s, i) => `<tr><td>${s}</td><td class="num">${fmtPct(linhas[i].demXProd)}</td><td class="num">${fmtPct(linhas[i].demXProg)}</td><td class="num">${fmtPct(linhas[i].progXProd)}</td></tr>`).join('')}
+        ${linhasSetor.map(l => `<tr><td>${l.setor}</td><td class="num">${fmtPct(l.demXProd)}</td><td class="num">${fmtPct(l.demXProg)}</td><td class="num">${fmtPct(l.progXProd)}</td></tr>`).join('')}
       </tbody>
       <tfoot><tr><td>Total</td><td class="num">${fmtPct(ind.demXProd)}</td><td class="num">${fmtPct(ind.demXProg)}</td><td class="num">${fmtPct(ind.progXProd)}</td></tr></tfoot>
     </table>`;
   document.getElementById('tabelaSetor').innerHTML = setores.length ? tabela : '<div class="empty">Nenhum dado para o filtro selecionado.</div>';
+  registrarOrdenacao('tabelaSetor', renderTudo);
 
   // Evolução mensal — todos os meses do ano corrente, respeitando Setor/Produto (ignora Mês/Semana)
   const [anoAtual] = mesSelect.value.split('|').map(Number);
@@ -495,7 +543,7 @@ function renderProdutos(regsMes) {
     porProduto[r.produto].prod += r.produzido_kg;
   });
 
-  const linhas = Object.entries(porProduto)
+  let linhas = Object.entries(porProduto)
     .map(([produto, v]) => ({
       produto, setor: v.setor,
       aderencia: v.prog > 0 ? 100 * v.prod / v.prog : null,
@@ -514,9 +562,20 @@ function renderProdutos(regsMes) {
     <div class="stat-tile"><div class="label">% Dentro da Meta</div><div class="value" style="font-size:22px">${linhas.length ? fmtPct(100 * dentro / linhas.length) : '-'}</div></div>
     <div class="stat-tile"><div class="label">Fora da Meta</div><div class="value" style="color: var(--critical)">${fora}</div></div>`;
 
+  linhas = ordenarLinhas(
+    linhas.map(l => ({ ...l, dentroNum: l.dentro ? 1 : 0 })),
+    'tabelaProdutos',
+    { produto: 'string', setor: 'string', aderencia: 'number', dentroNum: 'number' }
+  );
+
   const tabela = `
     <table>
-      <thead><tr><th>Produto</th><th>Setor</th><th class="num">Aderência Bruta (Prod ÷ Prog)</th><th>Status Meta (95%–105%)</th></tr></thead>
+      <thead><tr>
+        ${th('Produto', 'produto', 'tabelaProdutos')}
+        ${th('Setor', 'setor', 'tabelaProdutos')}
+        ${th('Aderência Bruta (Prod ÷ Prog)', 'aderencia', 'tabelaProdutos', 'num')}
+        ${th('Status Meta (95%–105%)', 'dentroNum', 'tabelaProdutos')}
+      </tr></thead>
       <tbody>
         ${linhas.map(l => `
           <tr>
@@ -528,21 +587,31 @@ function renderProdutos(regsMes) {
       </tbody>
     </table>`;
   document.getElementById('tabelaProdutos').innerHTML = linhas.length ? tabela : '<div class="empty">Nenhum produto fabricado no filtro selecionado.</div>';
+  registrarOrdenacao('tabelaProdutos', renderTudo);
 }
 
 // ---------------------------------------------------------------
 // COMENTÁRIOS
 // ---------------------------------------------------------------
 function renderComentarios(regsMes) {
-  const comentados = regsMes.filter(r => r.comentario).sort((a, b) => a.num_semana - b.num_semana);
+  let comentados = regsMes.filter(r => r.comentario).sort((a, b) => a.num_semana - b.num_semana);
+  comentados = ordenarLinhas(comentados, 'tabelaComentarios', {
+    semana: 'string', produto: 'string', setor: 'string', comentario: 'string', num_semana: 'number'
+  });
   const tabela = `
     <table>
-      <thead><tr><th>Semana</th><th>Produto</th><th>Setor</th><th>Comentário</th></tr></thead>
+      <thead><tr>
+        ${th('Semana', 'num_semana', 'tabelaComentarios')}
+        ${th('Produto', 'produto', 'tabelaComentarios')}
+        ${th('Setor', 'setor', 'tabelaComentarios')}
+        ${th('Comentário', 'comentario', 'tabelaComentarios')}
+      </tr></thead>
       <tbody>
         ${comentados.map(r => `<tr><td>${r.semana}</td><td>${r.produto}</td><td>${r.setor}</td><td>${r.comentario}</td></tr>`).join('')}
       </tbody>
     </table>`;
   document.getElementById('tabelaComentarios').innerHTML = comentados.length ? tabela : '<div class="empty">Nenhum comentário registrado para o filtro selecionado.</div>';
+  registrarOrdenacao('tabelaComentarios', renderTudo);
 }
 
 // ---------------------------------------------------------------

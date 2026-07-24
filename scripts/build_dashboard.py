@@ -198,6 +198,10 @@ def montar_lotes_por_data(df: pd.DataFrame) -> dict:
                 "nome": row["Nome Curto"],
                 "lote": str(row["Lote Fab."]),
                 "fabricacao": fmt_data(row["Data Fab. Lote"]),
+                "fabricacao_iso": (
+                    row["Data Fab. Lote"].strftime("%Y-%m-%d")
+                    if pd.notna(row["Data Fab. Lote"]) else None
+                ),
                 "validade": fmt_data(row["Data Validade"]),
                 "validade_iso": (
                     row["Data Validade"].strftime("%Y-%m-%d")
