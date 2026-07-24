@@ -1,8 +1,7 @@
 # Viçosa BI — Painel de Indicadores
 
 Portal com os painéis de BI da Viçosa, publicado gratuitamente pelo GitHub
-Pages. Hoje tem um painel funcionando (Estoque 006) e um espaço reservado
-para o próximo (Aderência).
+Pages. Hoje tem dois painéis: **Estoque 006** e **Aderência**.
 
 ## Estrutura do portal
 
@@ -13,7 +12,8 @@ docs/
 │   ├── index.html         <- dashboard de Estoque 006 (gerado pelo script)
 │   └── vendor/plotly.min.js
 └── aderencia/
-    └── index.html         <- placeholder "em construção" até os dados chegarem
+    ├── index.html         <- dashboard de Aderência (gerado pelo script)
+    └── vendor/plotly.min.js
 ```
 
 Cada painel novo ganha sua própria subpasta dentro de `docs/`, e um novo
@@ -91,6 +91,50 @@ local (protocolo `file://`), os links entre pastas (`./estoque-006/`) não
 abrem `index.html` automaticamente — funciona certinho só quando publicado
 no GitHub Pages (ou rodando um servidor local, ex: `python -m http.server`
 dentro da pasta `docs/`).
+
+## Painel: Aderência
+
+Painel de aderência de produção (demandado x programado x produzido), a
+partir da planilha `data/aderencia/Producao_Semanal_PowerBI.xlsx`.
+
+### O que ele mostra
+
+- 4 abas: **Visão Geral** (indicadores por setor + evolução mensal),
+  **Comparativo Semanal** (indicadores por semana dentro do mês),
+  **Produtos** (aderência bruta por produto e status de meta) e
+  **Comentários** (justificativas registradas por semana/produto).
+- Filtros por **Mês**, **Semana**, **Setor** e **Produto** (múltipla seleção).
+
+### Fórmulas (conferidas linha a linha contra o relatório original)
+
+- `Demandado × Produzido` = SOMA(Produzido Ajustado KG) ÷ SOMA(Demanda KG)
+- `Demandado × Programado` = SOMA(Programado Ajustado KG) ÷ SOMA(Demanda KG)
+- `Programado × Produzido` = SOMA(Produzido Ajustado KG) ÷ SOMA(Programado Ajustado KG)
+- `Aderência Bruta` (por produto) = SOMA(Produzido KG) ÷ SOMA(Programado KG)
+- **Dentro da Meta** = Aderência Bruta entre 95% e 105% (inclusive)
+
+As colunas "Ajustado" já vêm prontas na planilha (tetos aplicados para não
+ultrapassar 100% na comparação com a demanda/programado); veja a aba
+`Dicionario_Colunas` da própria planilha para a lógica completa.
+
+### Como atualizar
+
+1. Substitua `data/aderencia/Producao_Semanal_PowerBI.xlsx` pela versão mais
+   recente (mesmas colunas da aba `Dados_Consolidados`).
+2. Rode:
+
+   ```bash
+   python scripts/build_aderencia.py
+   ```
+
+3. Isso regenera `docs/aderencia/index.html`.
+4. Suba pro GitHub:
+
+   ```bash
+   git add data/aderencia/Producao_Semanal_PowerBI.xlsx docs/aderencia/index.html
+   git commit -m "Atualiza dados de aderência"
+   git push
+   ```
 
 ## Observação sobre a planilha
 

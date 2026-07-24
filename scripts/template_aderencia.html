@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aderência de Produção</title>
+<script src="./vendor/plotly.min.js"></script>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --brand:          #1B5E3A;
+    --surface-1:      #FFFFFF;
+    --page-plane:     #F7F5F0;
+    --text-primary:   #2D2D2D;
+    --text-secondary: #52514e;
+    --text-muted:     #7F898A;
+    --gridline:       #E0E0E0;
+    --baseline:       #C3C2B7;
+    --border:         #E0E0E0;
+    --slicer-bg:      #F7F5F0;
+    --series-1: #1B5E3A; /* verde — Demandado x Produzido */
+    --series-2: #0277BD; /* azul — Demandado x Programado */
+    --series-3: #C68642; /* âmbar — Programado x Produzido */
+    --good:     #2E7D32;
+    --warning:  #C68642;
+    --critical: #B00020;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--page-plane);
+    color: var(--text-primary);
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 20px 64px; }
+  header.top { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+  h1 { font-size: 20px; margin: 0; color: var(--brand); font-weight: 600; }
+  .subtitle { color: var(--text-secondary); font-size: 12px; }
+  a.voltar { display: inline-block; font-size: 12px; color: var(--brand); text-decoration: none; font-weight: 600; margin-bottom: 14px; }
+  a.voltar:hover { text-decoration: underline; }
+
+  nav.tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+  nav.tabs button {
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    padding: 10px 16px; border: none; background: none; cursor: pointer;
+    color: var(--text-secondary); border-bottom: 2px solid transparent;
+  }
+  nav.tabs button.active { color: var(--brand); border-bottom-color: var(--brand); }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; background: var(--slicer-bg); border-radius: 6px; }
+  .filter-group { display: flex; flex-direction: column; gap: 6px; }
+  .filter-group label { font-size: 11px; color: var(--brand); font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
+  select {
+    font-family: inherit; font-size: 13px; padding: 7px 10px; border-radius: 6px;
+    border: 1px solid var(--baseline); background: var(--surface-1); color: var(--text-primary);
+    min-width: 160px;
+  }
+
+  .multiselect { position: relative; min-width: 200px; }
+  .multiselect-btn {
+    width: 100%; font-family: inherit; font-size: 13px; padding: 7px 10px; border-radius: 6px;
+    border: 1px solid var(--baseline); background: var(--surface-1); color: var(--text-primary);
+    text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .multiselect-btn:after { content: "▾"; color: var(--text-muted); font-size: 11px; }
+  .multiselect-panel {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 100%;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12); z-index: 20; max-height: 260px; overflow-y: auto; padding: 6px 0;
+  }
+  .multiselect.open .multiselect-panel { display: block; }
+  .multiselect-option { display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .multiselect-option:hover { background: var(--slicer-bg); }
+  .multiselect-option input { accent-color: var(--brand); cursor: pointer; }
+  .multiselect-divider { border-top: 1px solid var(--gridline); margin: 4px 0; }
+  .multiselect-action { padding: 6px 12px; font-size: 12px; color: var(--brand); cursor: pointer; font-weight: 600; }
+  .multiselect-action:hover { text-decoration: underline; }
+
+  .stat-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  .stat-tile {
+    flex: 1 1 160px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px;
+    padding: 14px 16px; text-align: center;
+  }
+  .stat-tile .label { font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .02em; }
+  .stat-tile .value { font-size: 26px; font-weight: 600; color: var(--brand); font-family: "Segoe UI Semibold", "Segoe UI", sans-serif; }
+
+  h2 { font-size: 14px; margin: 0 0 12px; color: var(--text-primary); font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--gridline); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:nth-child(even) { background: #FAFAF8; }
+  tfoot td { font-weight: 700; border-top: 2px solid var(--text-primary); border-bottom: none; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+  .badge.good { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good); }
+  .badge.critical { background: color-mix(in srgb, var(--critical) 15%, transparent); color: var(--critical); }
+  .table-scroll { max-height: 460px; overflow-y: auto; }
+  .footer-note { color: var(--text-muted); font-size: 12px; margin-top: 24px; text-align: center; }
+  .empty { color: var(--text-muted); font-size: 13px; padding: 12px 0; }
+  .chart-tall { width: 100%; height: 380px; }
+  .page { display: none; }
+  .page.active { display: block; }
+</style>
+</head>
+<body>
+<div class="viz-root wrap">
+  <a class="voltar" href="../">← Voltar ao início</a>
+  <header class="top">
+    <div>
+      <h1>Aderência de Produção</h1>
+      <div class="subtitle" id="geradoEm"></div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-page="geral" class="active">Visão Geral</button>
+    <button data-page="semanal">Comparativo Semanal</button>
+    <button data-page="produtos">Produtos</button>
+    <button data-page="comentarios">Comentários</button>
+  </nav>
+
+  <div class="card filters">
+    <div class="filter-group">
+      <label for="filtroMes">Mês</label>
+      <select id="filtroMes"></select>
+    </div>
+    <div class="filter-group">
+      <label for="filtroSemana">Semana</label>
+      <div class="multiselect" id="filtroSemana"></div>
+    </div>
+    <div class="filter-group">
+      <label for="filtroSetor">Setor</label>
+      <div class="multiselect" id="filtroSetor"></div>
+    </div>
+    <div class="filter-group">
+      <label for="filtroProduto">Produto</label>
+      <div class="multiselect" id="filtroProduto"></div>
+    </div>
+  </div>
+
+  <!-- ===================== VISÃO GERAL ===================== -->
+  <section class="page active" id="page-geral">
+    <div class="stat-row" id="statRowGeral"></div>
+
+    <div class="card">
+      <h2>Aderência por Setor</h2>
+      <div class="table-scroll" id="tabelaSetor"></div>
+    </div>
+
+    <div class="card">
+      <h2>Evolução dos indicadores de aderência — comparativo mensal</h2>
+      <div id="chartMensal" class="chart-tall"></div>
+    </div>
+  </section>
+
+  <!-- ===================== COMPARATIVO SEMANAL ===================== -->
+  <section class="page" id="page-semanal">
+    <div class="stat-row" id="statRowSemanal"></div>
+    <div class="card">
+      <h2 id="tituloSemanal">Comparativo semanal de aderência</h2>
+      <div id="chartSemanal" class="chart-tall"></div>
+    </div>
+  </section>
+
+  <!-- ===================== PRODUTOS ===================== -->
+  <section class="page" id="page-produtos">
+    <div class="stat-row" id="statRowProdutos"></div>
+    <div class="card">
+      <h2>Aderência bruta por produto (Produzido ÷ Programado)</h2>
+      <div class="table-scroll" id="tabelaProdutos"></div>
+    </div>
+  </section>
+
+  <!-- ===================== COMENTÁRIOS ===================== -->
+  <section class="page" id="page-comentarios">
+    <div class="card">
+      <h2>Comentários por semana</h2>
+      <div class="table-scroll" id="tabelaComentarios"></div>
+    </div>
+  </section>
+
+  <div class="footer-note">Fonte: Producao_Semanal_PowerBI.xlsx</div>
+</div>
+
+<script>
+const DATA = __ADERENCIA_DATA__;
+const THEME = __THEME_DATA__;
+
+document.getElementById('geradoEm').textContent = 'Atualizado em ' + DATA.gerado_em;
+
+function resolveVar(name) {
+  return getComputedStyle(document.querySelector('.viz-root')).getPropertyValue(name).trim();
+}
+function fmtPct(n) { return n === null || n === undefined || isNaN(n) ? '-' : n.toFixed(2).replace('.', ',') + '%'; }
+function fmtMil(n) { return n === null || n === undefined ? '-' : (n / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' Mil'; }
+function fmtNum(n) { return n === null || n === undefined ? '-' : n.toLocaleString('pt-BR', { maximumFractionDigits: 0 }); }
+
+function baseLayout() {
+  return {
+    margin: { l: 55, r: 20, t: 10, b: 60 },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'transparent',
+    font: { family: '"Segoe UI", sans-serif', color: resolveVar('--text-secondary'), size: 12 },
+    xaxis: { gridcolor: resolveVar('--gridline'), linecolor: resolveVar('--baseline'), tickfont: { color: resolveVar('--text-muted') } },
+    yaxis: { gridcolor: resolveVar('--gridline'), linecolor: resolveVar('--baseline'), tickfont: { color: resolveVar('--text-muted') }, rangemode: 'tozero', ticksuffix: '%' },
+    legend: { orientation: 'h', y: -0.25, font: { color: resolveVar('--text-secondary') } },
+    showlegend: true,
+  };
+}
+
+// ---------------------------------------------------------------
+// Navegação entre páginas
+// ---------------------------------------------------------------
+document.querySelectorAll('nav.tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('page-' + btn.dataset.page).classList.add('active');
+    ['chartMensal', 'chartSemanal'].forEach(id => { if (document.getElementById(id)) Plotly.Plots.resize(id); });
+  });
+});
+
+// ---------------------------------------------------------------
+// Componente: multi-seleção com checkboxes (mesmo padrão do painel de Estoque)
+// ---------------------------------------------------------------
+function createMultiSelect(containerId, options, initialSelected) {
+  const container = document.getElementById(containerId);
+  const norm = options.map(o => (typeof o === 'string' ? { value: o, label: o } : o));
+  const allValues = norm.map(o => o.value);
+  let selected = new Set(initialSelected === 'all' || initialSelected === undefined ? allValues : initialSelected);
+  let onChangeCb = null;
+
+  function labelFor(value) { const f = norm.find(o => o.value === value); return f ? f.label : value; }
+  function buttonLabel() {
+    if (selected.size === 0) return 'Nenhum selecionado';
+    if (selected.size === norm.length) return 'Todos';
+    if (selected.size <= 2) return [...selected].map(labelFor).join(', ');
+    return `${selected.size} selecionados`;
+  }
+  function render() {
+    container.innerHTML = `
+      <button type="button" class="multiselect-btn"><span class="ms-label">${buttonLabel()}</span></button>
+      <div class="multiselect-panel">
+        <div class="multiselect-action" data-action="all">Selecionar todos</div>
+        <div class="multiselect-action" data-action="none">Limpar seleção</div>
+        <div class="multiselect-divider"></div>
+        ${norm.map(o => `
+          <label class="multiselect-option">
+            <input type="checkbox" value="${o.value}" ${selected.has(o.value) ? 'checked' : ''}>
+            <span>${o.label}</span>
+          </label>`).join('')}
+      </div>`;
+    container.querySelector('.multiselect-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.multiselect.open').forEach(el => { if (el !== container) el.classList.remove('open'); });
+      container.classList.toggle('open');
+    });
+    container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) selected.add(cb.value); else selected.delete(cb.value);
+        container.querySelector('.ms-label').textContent = buttonLabel();
+        if (onChangeCb) onChangeCb();
+      });
+    });
+    container.querySelector('[data-action="all"]').addEventListener('click', () => { selected = new Set(allValues); render(); if (onChangeCb) onChangeCb(); });
+    container.querySelector('[data-action="none"]').addEventListener('click', () => { selected = new Set(); render(); if (onChangeCb) onChangeCb(); });
+  }
+  render();
+  return { getSelected: () => selected, onChange: (cb) => { onChangeCb = cb; } };
+}
+document.addEventListener('click', () => { document.querySelectorAll('.multiselect.open').forEach(el => el.classList.remove('open')); });
+
+// ---------------------------------------------------------------
+// Filtros
+// ---------------------------------------------------------------
+const mesSelect = document.getElementById('filtroMes');
+mesSelect.innerHTML = DATA.filtros.meses.map(m => `<option value="${m.ano}|${m.mes_num}">${m.label}</option>`).join('');
+mesSelect.value = `${DATA.filtros.meses[DATA.filtros.meses.length - 1].ano}|${DATA.filtros.meses[DATA.filtros.meses.length - 1].mes_num}`;
+
+function semanasDoMes(ano, mesNum) {
+  const nums = [...new Set(DATA.registros.filter(r => r.ano === ano && r.mes_num === mesNum).map(r => r.semana))];
+  return nums.sort((a, b) => {
+    const na = DATA.registros.find(r => r.semana === a).num_semana;
+    const nb = DATA.registros.find(r => r.semana === b).num_semana;
+    return na - nb;
+  });
+}
+
+let semanaMultiselect = null;
+function popularSemanas() {
+  const [ano, mesNum] = mesSelect.value.split('|').map(Number);
+  semanaMultiselect = createMultiSelect('filtroSemana', semanasDoMes(ano, mesNum), 'all');
+  semanaMultiselect.onChange(renderTudo);
+}
+
+const setorMultiselect = createMultiSelect('filtroSetor', DATA.filtros.setores, 'all');
+
+let produtoMultiselect = null;
+function popularProdutos() {
+  const setoresSel = setorMultiselect.getSelected();
+  const produtos = DATA.filtros.produtos.filter(p => setoresSel.has(p.setor));
+  produtoMultiselect = createMultiSelect('filtroProduto', produtos.map(p => p.nome), 'all');
+  produtoMultiselect.onChange(renderTudo);
+}
+
+popularSemanas();
+popularProdutos();
+
+mesSelect.addEventListener('change', () => { popularSemanas(); renderTudo(); });
+setorMultiselect.onChange(() => { popularProdutos(); renderTudo(); });
+
+// ---------------------------------------------------------------
+// Agregações
+// ---------------------------------------------------------------
+function calcularIndicadores(regs) {
+  const demanda = regs.reduce((a, r) => a + r.demanda_kg, 0);
+  const progAjust = regs.reduce((a, r) => a + r.programado_ajustado_kg, 0);
+  const prodAjust = regs.reduce((a, r) => a + r.produzido_ajustado_kg, 0);
+  const qtdProduzida = regs.reduce((a, r) => a + r.produzido_un, 0);
+  return {
+    demXProd: demanda > 0 ? 100 * prodAjust / demanda : null,
+    demXProg: demanda > 0 ? 100 * progAjust / demanda : null,
+    progXProd: progAjust > 0 ? 100 * prodAjust / progAjust : null,
+    qtdProduzida,
+  };
+}
+
+function registrosFiltrados({ ignorarMes, ignorarSemana } = {}) {
+  const [ano, mesNum] = mesSelect.value.split('|').map(Number);
+  const semanasSel = semanaMultiselect ? semanaMultiselect.getSelected() : null;
+  const setoresSel = setorMultiselect.getSelected();
+  const produtosSel = produtoMultiselect ? produtoMultiselect.getSelected() : null;
+
+  return DATA.registros.filter(r => {
+    if (!ignorarMes && (r.ano !== ano || r.mes_num !== mesNum)) return false;
+    if (!ignorarSemana && semanasSel && !semanasSel.has(r.semana)) return false;
+    if (!setoresSel.has(r.setor)) return false;
+    if (produtosSel && !produtosSel.has(r.produto)) return false;
+    return true;
+  });
+}
+
+function statTiles(ind) {
+  return `
+    <div class="stat-tile"><div class="label">Demandado × Produzido</div><div class="value">${fmtPct(ind.demXProd)}</div></div>
+    <div class="stat-tile"><div class="label">Demandado × Programado</div><div class="value">${fmtPct(ind.demXProg)}</div></div>
+    <div class="stat-tile"><div class="label">Programado × Produzido</div><div class="value">${fmtPct(ind.progXProd)}</div></div>
+    <div class="stat-tile"><div class="label">Quantidade Produzida</div><div class="value" style="font-size:22px">${fmtMil(ind.qtdProduzida)}</div></div>`;
+}
+
+// ---------------------------------------------------------------
+// VISÃO GERAL
+// ---------------------------------------------------------------
+function renderGeral(regsMes) {
+  const ind = calcularIndicadores(regsMes);
+  document.getElementById('statRowGeral').innerHTML = statTiles(ind);
+
+  const setores = [...new Set(regsMes.map(r => r.setor))].sort();
+  const linhas = setores.map(s => calcularIndicadores(regsMes.filter(r => r.setor === s)));
+
+  const tabela = `
+    <table>
+      <thead><tr><th>Setor</th><th class="num">Demandado × Produzido</th><th class="num">Demandado × Programado</th><th class="num">Programado × Produzido</th></tr></thead>
+      <tbody>
+        ${setores.map((s, i) => `<tr><td>${s}</td><td class="num">${fmtPct(linhas[i].demXProd)}</td><td class="num">${fmtPct(linhas[i].demXProg)}</td><td class="num">${fmtPct(linhas[i].progXProd)}</td></tr>`).join('')}
+      </tbody>
+      <tfoot><tr><td>Total</td><td class="num">${fmtPct(ind.demXProd)}</td><td class="num">${fmtPct(ind.demXProg)}</td><td class="num">${fmtPct(ind.progXProd)}</td></tr></tfoot>
+    </table>`;
+  document.getElementById('tabelaSetor').innerHTML = setores.length ? tabela : '<div class="empty">Nenhum dado para o filtro selecionado.</div>';
+
+  // Evolução mensal — todos os meses do ano corrente, respeitando Setor/Produto (ignora Mês/Semana)
+  const [anoAtual] = mesSelect.value.split('|').map(Number);
+  const regsAno = registrosFiltrados({ ignorarMes: true, ignorarSemana: true }).filter(r => r.ano === anoAtual);
+  const meses = DATA.filtros.meses.filter(m => m.ano === anoAtual);
+  const porMes = meses.map(m => calcularIndicadores(regsAno.filter(r => r.mes_num === m.mes_num)));
+
+  const traces = [
+    { name: 'Demandado × Produzido', y: porMes.map(i => i.demXProd), color: resolveVar('--series-1') },
+    { name: 'Demandado × Programado', y: porMes.map(i => i.demXProg), color: resolveVar('--series-2') },
+    { name: 'Programado × Produzido', y: porMes.map(i => i.progXProd), color: resolveVar('--series-3') },
+  ].map(t => ({
+    x: meses.map(m => m.mes), y: t.y, name: t.name, type: 'bar',
+    marker: { color: t.color },
+    text: t.y.map(fmtPct), textposition: 'outside',
+    hovertemplate: '%{x}<br>%{y:.2f}%<extra></extra>',
+  }));
+  const layout = baseLayout();
+  layout.barmode = 'group';
+  layout.yaxis.range = [0, 115];
+  Plotly.newPlot('chartMensal', traces, layout, { displayModeBar: false, responsive: true });
+}
+
+// ---------------------------------------------------------------
+// COMPARATIVO SEMANAL
+// ---------------------------------------------------------------
+function renderSemanal(regsMes) {
+  const ind = calcularIndicadores(regsMes);
+  document.getElementById('statRowSemanal').innerHTML = statTiles(ind);
+
+  const [ano, mesNum] = mesSelect.value.split('|').map(Number);
+  const nomeMes = (DATA.filtros.meses.find(m => m.ano === ano && m.mes_num === mesNum) || {}).mes || '';
+  document.getElementById('tituloSemanal').textContent = `Comparativo semanal de aderência — ${nomeMes}/${ano}`;
+
+  const semanas = semanasDoMes(ano, mesNum);
+  const porSemana = semanas.map(s => calcularIndicadores(regsMes.filter(r => r.semana === s)));
+
+  const traces = [
+    { name: 'Demandado × Produzido', y: porSemana.map(i => i.demXProd), color: resolveVar('--series-1') },
+    { name: 'Demandado × Programado', y: porSemana.map(i => i.demXProg), color: resolveVar('--series-2') },
+    { name: 'Programado × Produzido', y: porSemana.map(i => i.progXProd), color: resolveVar('--series-3') },
+  ].map(t => ({
+    x: semanas, y: t.y, name: t.name, type: 'bar',
+    marker: { color: t.color },
+    text: t.y.map(fmtPct), textposition: 'outside',
+    hovertemplate: '%{x}<br>%{y:.2f}%<extra></extra>',
+  }));
+  const layout = baseLayout();
+  layout.barmode = 'group';
+  layout.yaxis.range = [0, 115];
+  Plotly.newPlot('chartSemanal', semanas.length ? traces : [], layout, { displayModeBar: false, responsive: true });
+}
+
+// ---------------------------------------------------------------
+// PRODUTOS
+// ---------------------------------------------------------------
+function renderProdutos(regsMes) {
+  const porProduto = {};
+  regsMes.forEach(r => {
+    if (!porProduto[r.produto]) porProduto[r.produto] = { setor: r.setor, prog: 0, prod: 0 };
+    porProduto[r.produto].prog += r.programado_kg;
+    porProduto[r.produto].prod += r.produzido_kg;
+  });
+
+  const linhas = Object.entries(porProduto)
+    .map(([produto, v]) => ({
+      produto, setor: v.setor,
+      aderencia: v.prog > 0 ? 100 * v.prod / v.prog : null,
+      produzido: v.prod,
+    }))
+    .filter(l => l.produzido > 0)
+    .map(l => ({ ...l, dentro: l.aderencia !== null && l.aderencia >= 95 && l.aderencia <= 105 }))
+    .sort((a, b) => b.aderencia - a.aderencia);
+
+  const dentro = linhas.filter(l => l.dentro).length;
+  const fora = linhas.length - dentro;
+
+  document.getElementById('statRowProdutos').innerHTML = `
+    <div class="stat-tile"><div class="label">Produtos Fabricados</div><div class="value">${linhas.length}</div></div>
+    <div class="stat-tile"><div class="label">Dentro da Meta</div><div class="value" style="color: var(--good)">${dentro}</div></div>
+    <div class="stat-tile"><div class="label">% Dentro da Meta</div><div class="value" style="font-size:22px">${linhas.length ? fmtPct(100 * dentro / linhas.length) : '-'}</div></div>
+    <div class="stat-tile"><div class="label">Fora da Meta</div><div class="value" style="color: var(--critical)">${fora}</div></div>`;
+
+  const tabela = `
+    <table>
+      <thead><tr><th>Produto</th><th>Setor</th><th class="num">Aderência Bruta (Prod ÷ Prog)</th><th>Status Meta (95%–105%)</th></tr></thead>
+      <tbody>
+        ${linhas.map(l => `
+          <tr>
+            <td>${l.produto}</td>
+            <td>${l.setor}</td>
+            <td class="num">${fmtPct(l.aderencia)}</td>
+            <td>${l.dentro ? '<span class="badge good">✅ Dentro da Meta</span>' : '<span class="badge critical">❌ Fora da Meta</span>'}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+  document.getElementById('tabelaProdutos').innerHTML = linhas.length ? tabela : '<div class="empty">Nenhum produto fabricado no filtro selecionado.</div>';
+}
+
+// ---------------------------------------------------------------
+// COMENTÁRIOS
+// ---------------------------------------------------------------
+function renderComentarios(regsMes) {
+  const comentados = regsMes.filter(r => r.comentario).sort((a, b) => a.num_semana - b.num_semana);
+  const tabela = `
+    <table>
+      <thead><tr><th>Semana</th><th>Produto</th><th>Setor</th><th>Comentário</th></tr></thead>
+      <tbody>
+        ${comentados.map(r => `<tr><td>${r.semana}</td><td>${r.produto}</td><td>${r.setor}</td><td>${r.comentario}</td></tr>`).join('')}
+      </tbody>
+    </table>`;
+  document.getElementById('tabelaComentarios').innerHTML = comentados.length ? tabela : '<div class="empty">Nenhum comentário registrado para o filtro selecionado.</div>';
+}
+
+// ---------------------------------------------------------------
+// Render geral
+// ---------------------------------------------------------------
+function renderTudo() {
+  const regsMes = registrosFiltrados();
+  renderGeral(regsMes);
+  renderSemanal(regsMes);
+  renderProdutos(regsMes);
+  renderComentarios(regsMes);
+}
+
+renderTudo();
+</script>
+</body>
+</html>
