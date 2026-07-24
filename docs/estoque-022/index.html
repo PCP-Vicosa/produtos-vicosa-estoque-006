@@ -3,12 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Estoque Depósito 006</title>
-<script src="./vendor/plotly.min.js"></script>
+<title>Estoque Depósito 022</title>
 <style>
   :root, .viz-root {
     color-scheme: light;
-    /* Paleta extraída do tema Power BI (Tema.json) */
     --brand:          #1B5E3A;
     --surface-1:      #FFFFFF;
     --page-plane:     #F7F5F0;
@@ -19,14 +17,6 @@
     --baseline:       #C3C2B7;
     --border:         #E0E0E0;
     --slicer-bg:      #F7F5F0;
-    --series-1: #1B5E3A; /* verde (marca) */
-    --series-2: #0277BD; /* azul */
-    --series-3: #C68642; /* âmbar */
-    --series-4: #6B8E23; /* oliva */
-    --series-5: #8B5A2B; /* marrom */
-    --series-6: #4A90A4; /* teal */
-    --series-7: #B8860B; /* dourado */
-    --series-8: #7B4F71; /* violeta */
     --good:     #2E7D32;
     --warning:  #C68642;
     --critical: #B00020;
@@ -39,19 +29,11 @@
     color: var(--text-primary);
   }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 20px 64px; }
-  header.top { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  header.top { margin-bottom: 6px; }
   header.top .title-group { display: flex; align-items: center; gap: 12px; }
-  header.top img.logo { width: 42px; height: 42px; border-radius: 8px; flex-shrink: 0; }
   h1 { font-size: 20px; margin: 0; color: var(--brand); font-weight: 600; }
   .subtitle { color: var(--text-secondary); font-size: 12px; }
-
-  nav.tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
-  nav.tabs button {
-    font-family: inherit; font-size: 13px; font-weight: 600;
-    padding: 10px 16px; border: none; background: none; cursor: pointer;
-    color: var(--text-secondary); border-bottom: 2px solid transparent;
-  }
-  nav.tabs button.active { color: var(--brand); border-bottom-color: var(--brand); }
+  .page-desc { color: var(--text-secondary); font-size: 13px; margin: 4px 0 18px; }
 
   .card {
     background: var(--surface-1);
@@ -63,16 +45,6 @@
   .filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; background: var(--slicer-bg); border-radius: 6px; }
   .filter-group { display: flex; flex-direction: column; gap: 6px; }
   .filter-group label { font-size: 11px; color: var(--brand); font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
-  select, input[type="date"] {
-    font-family: inherit;
-    font-size: 13px;
-    padding: 7px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--baseline);
-    background: var(--surface-1);
-    color: var(--text-primary);
-    min-width: 180px;
-  }
 
   /* Multi-select com checkboxes */
   .multiselect { position: relative; min-width: 200px; }
@@ -129,6 +101,7 @@
     font-weight: 600;
   }
   .multiselect-action:hover { text-decoration: underline; }
+
   .stat-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
   .stat-tile {
     flex: 1 1 160px;
@@ -140,10 +113,6 @@
   }
   .stat-tile .label { font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .02em; }
   .stat-tile .value { font-size: 28px; font-weight: 600; color: var(--brand); font-family: "Segoe UI Semibold", "Segoe UI", sans-serif; }
-  .stat-tile .delta { font-size: 12px; margin-top: 4px; }
-  .delta.up { color: var(--good); }
-  .delta.down { color: var(--critical); }
-  .delta.flat { color: var(--text-muted); }
 
   h2 { font-size: 14px; margin: 0 0 12px; color: var(--text-primary); font-weight: 600; }
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -161,11 +130,6 @@
   .table-scroll { max-height: 420px; overflow-y: auto; }
   .footer-note { color: var(--text-muted); font-size: 12px; margin-top: 24px; text-align: center; }
   .empty { color: var(--text-muted); font-size: 13px; padding: 12px 0; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
-  .chart-tall { width: 100%; height: 380px; }
-  .page { display: none; }
-  .page.active { display: block; }
 
   .app-shell { display: flex; align-items: stretch; min-height: 100vh; }
   .sidebar {
@@ -201,7 +165,6 @@
   .sidebar .sb-card-desc { font-size: 11px; color: rgba(255,255,255,0.75); margin: 0; line-height: 1.35; }
   .sidebar a.sb-card.active .sb-card-desc { color: var(--text-secondary); }
 
-  /* Sidebar recolhida (desktop): fica só com os ícones */
   .sidebar.collapsed { width: 72px; padding: 26px 12px; }
   .sidebar.collapsed .logo-row { justify-content: center; margin-bottom: 0; }
   .sidebar.collapsed .logo-row img { width: 40px; height: 40px; }
@@ -214,14 +177,13 @@
   .main-content { flex: 1; min-width: 0; }
   .main-content .wrap { max-width: none; }
 
-  /* ---------------- Responsivo (celular / telas estreitas) ---------------- */
   @media (max-width: 820px) {
     .app-shell { flex-direction: column; min-height: auto; }
     .sidebar { width: 100% !important; box-sizing: border-box; padding: 16px !important; }
     .sidebar-toggle { position: static; margin-left: auto; transform: none !important; }
     .sidebar .logo-row { justify-content: space-between; margin-bottom: 0; }
     .sidebar .logo-row img { width: 44px; height: 44px; }
-    .sidebar-cards { overflow: hidden; max-height: 400px; transition: max-height .2s ease; margin-top: 14px; }
+    .sidebar-cards { overflow: hidden; max-height: 460px; transition: max-height .2s ease; margin-top: 14px; }
     .sidebar.collapsed .sidebar-cards { max-height: 0; margin-top: 0; }
     .sidebar .sb-subtitle { display: block !important; margin: 10px 0 12px; }
     .sidebar.collapsed .sb-subtitle { display: none !important; }
@@ -231,15 +193,11 @@
     .main-content { padding-top: 4px; }
     .wrap { padding: 14px 12px 40px !important; }
     h1 { font-size: 17px !important; }
-    nav.tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
-    nav.tabs button { white-space: nowrap; }
     .filters { padding: 12px !important; gap: 10px !important; }
     .filter-group, .multiselect { min-width: 0; flex: 1 1 100%; }
     .stat-row { gap: 8px !important; }
     .stat-tile { flex: 1 1 calc(50% - 8px); padding: 10px 12px !important; }
     .stat-tile .value { font-size: 20px !important; }
-    .grid-2 { grid-template-columns: 1fr !important; }
-    .chart-tall { height: 260px !important; }
     table { font-size: 11.5px; }
     th, td { padding: 6px 8px !important; }
   }
@@ -255,7 +213,7 @@
     </div>
     <div class="sb-subtitle">Selecione um painel para acompanhar</div>
     <div class="sidebar-cards">
-      <a class="sb-card active" href="../" title="Clique novamente para remover a seleção">
+      <a class="sb-card" href="../estoque-006/">
         <div class="sb-icon">E6</div>
         <div>
           <p class="sb-card-title">Estoque 006</p>
@@ -269,7 +227,7 @@
           <p class="sb-card-desc">Demandado x programado x produzido.</p>
         </div>
       </a>
-      <a class="sb-card" href="../estoque-022/">
+      <a class="sb-card active" href="../" title="Clique novamente para remover a seleção">
         <div class="sb-icon">E22</div>
         <div>
           <p class="sb-card-title">Estoque 022</p>
@@ -283,121 +241,52 @@
   <header class="top">
     <div class="title-group">
       <div>
-        <h1>Estoque — Depósito 006</h1>
+        <h1>Estoque — Depósito 022</h1>
         <div class="subtitle" id="geradoEm"></div>
       </div>
     </div>
   </header>
+  <div class="page-desc">Produtos aguardando liberação da qualidade.</div>
 
-  <nav class="tabs">
-    <button data-page="geral" class="active">Visão Geral</button>
-    <button data-page="familia">Família / SKU</button>
-    <button data-page="lotes">Lotes e Validade</button>
-  </nav>
-
-  <!-- ===================== PÁGINA 1: VISÃO GERAL ===================== -->
-  <section class="page active" id="page-geral">
-    <div class="card filters">
-      <div class="filter-group">
-        <label for="geralPeriodo">Período</label>
-        <select id="geralPeriodo">
-          <option value="7">Última semana</option>
-          <option value="30">Último mês</option>
-          <option value="all" selected>Tudo</option>
-        </select>
-      </div>
+  <div class="card filters">
+    <div class="filter-group">
+      <label for="e22Setor">Setor</label>
+      <div class="multiselect" id="e22Setor"></div>
     </div>
-
-    <div class="stat-row" id="geralStatRow"></div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h2>Saldo disponível (kg) x Data</h2>
-        <div id="chartGeralLinha" class="chart-tall"></div>
-      </div>
-      <div class="card">
-        <h2>Saldo por Setor (kg)</h2>
-        <div id="chartGeralSetor" class="chart-tall"></div>
-      </div>
+    <div class="filter-group">
+      <label for="e22Produto">Produto</label>
+      <div class="multiselect" id="e22Produto"></div>
     </div>
-  </section>
-
-  <!-- ===================== PÁGINA 2: FAMÍLIA / SKU ===================== -->
-  <section class="page" id="page-familia">
-    <div class="card filters">
-      <div class="filter-group">
-        <label for="familiaSetor">Setor</label>
-        <div class="multiselect" id="familiaSetor"></div>
-      </div>
-      <div class="filter-group">
-        <label for="familiaPeriodo">Período</label>
-        <select id="familiaPeriodo">
-          <option value="7">Última semana</option>
-          <option value="30">Último mês</option>
-          <option value="all" selected>Tudo</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2 id="familiaLinhaTitle">Saldo disponível (kg) x Data</h2>
-      <div id="chartFamiliaLinha" class="chart-tall"></div>
-    </div>
-
-    <div class="card">
-      <h2 id="familiaWaterfallTitle">Saldo disponível (kg) x SKU</h2>
-      <div id="chartFamiliaWaterfall" class="chart-tall"></div>
-    </div>
-  </section>
-
-  <!-- ===================== PÁGINA 3: LOTES E VALIDADE ===================== -->
-  <section class="page" id="page-lotes">
-    <div class="card filters">
-      <div class="filter-group">
-        <label for="lotesSetor">Setor</label>
-        <div class="multiselect" id="lotesSetor"></div>
-      </div>
-      <div class="filter-group">
-        <label for="lotesProduto">Produto</label>
-        <div class="multiselect" id="lotesProduto"></div>
-      </div>
-      <div class="filter-group">
-        <label for="lotesData">Leitura (data)</label>
-        <select id="lotesData"></select>
-      </div>
-      <div class="filter-group">
-        <label>&nbsp;</label>
-        <span class="subtitle" id="lotesHojeNota" style="padding: 7px 0;"></span>
-      </div>
-    </div>
-
-    <div class="stat-row" id="lotesStatRow"></div>
-
-    <div class="card">
-      <h2>Informações de produtos fabricados</h2>
-      <div class="table-scroll" id="tabelaTodos"></div>
-    </div>
-
-    <div class="card">
-      <h2>Produtos com menos de 50% de validade</h2>
-      <div class="table-scroll" id="tabelaAtencao"></div>
-    </div>
-
-    <div class="card">
-      <h2>Produtos vencidos — retirar do estoque</h2>
-      <div class="table-scroll" id="tabelaVencidos"></div>
-    </div>
-  </section>
-
   </div>
+
+  <div class="stat-row" id="e22StatRow"></div>
+
+  <div class="card">
+    <h2>Informações de produtos aguardando liberação</h2>
+    <div class="table-scroll" id="e22TabelaTodos"></div>
+  </div>
+
+  <div class="card">
+    <h2>Produtos com menos de 50% de validade</h2>
+    <div class="table-scroll" id="e22TabelaAtencao"></div>
+  </div>
+
+  <div class="card">
+    <h2>Produtos vencidos — retirar do estoque</h2>
+    <div class="table-scroll" id="e22TabelaVencidos"></div>
+  </div>
+
+  <div class="footer-note">Fonte: BD_022.xlsx — Depósito 022 (Qualidade)</div>
+</div>
   </div>
 </div>
 
 <script>
-const DATA = __DASHBOARD_DATA__;
-const THEME = __THEME_DATA__;
+const DATA = {"gerado_em": "24/07/2026 18:25", "data_arquivo": "24/07/2026", "filtros": {"setores": ["Doce", "Iogurte", "Leite", "Manteiga", "Queijo", "Requeijão"], "produtos": [{"codigo": "0400300032", "nome": "Abacaxi c/ Coco 120g", "setor": "Iogurte"}, {"codigo": "0400300033", "nome": "Abacaxi c/ Coco 185g", "setor": "Iogurte"}, {"codigo": "0400300041", "nome": "Abacaxi c/ Coco 900g", "setor": "Iogurte"}, {"codigo": "0400500012", "nome": "Cacau 5kg Bag", "setor": "Doce"}, {"codigo": "0400300023", "nome": "Coco 120g", "setor": "Iogurte"}, {"codigo": "0400300015", "nome": "Coco 185g", "setor": "Iogurte"}, {"codigo": "0400300039", "nome": "Coco 900g", "setor": "Iogurte"}, {"codigo": "0400900004", "nome": "Creme de Ricota 200g", "setor": "Requeijão"}, {"codigo": "0400300037", "nome": "Grego Frutas Verm. 120g", "setor": "Iogurte"}, {"codigo": "0400600001", "nome": "Manteiga 200g", "setor": "Manteiga"}, {"codigo": "0400600002", "nome": "Manteiga 500g", "setor": "Manteiga"}, {"codigo": "0400300019", "nome": "Morango 120g", "setor": "Iogurte"}, {"codigo": "0400300007", "nome": "Morango 185g", "setor": "Iogurte"}, {"codigo": "0400300038", "nome": "Morango 900g", "setor": "Iogurte"}, {"codigo": "0400700002", "nome": "Mussarela 3kg", "setor": "Queijo"}, {"codigo": "0400300036", "nome": "Natural Desnatado 170g", "setor": "Iogurte"}, {"codigo": "0400900002", "nome": "Requeijão 400g", "setor": "Requeijão"}, {"codigo": "0400900003", "nome": "Requeijão Copo 200g", "setor": "Requeijão"}, {"codigo": "0400500004", "nome": "Tradicional 400g", "setor": "Doce"}, {"codigo": "0400500011", "nome": "Tradicional 5kg Bag", "setor": "Doce"}, {"codigo": "0400500008", "nome": "Tradicional 800g", "setor": "Doce"}, {"codigo": "0400500019", "nome": "Zero Açúcar/Lactose 400g", "setor": "Doce"}, {"codigo": "0400800007", "nome": "Zero Lactose 1L", "setor": "Leite"}]}, "lotes": [{"setor": "Leite", "produto": "0400800007", "nome": "Zero Lactose 1L", "lote": "LL00114/26", "fabricacao": "27/03/2026", "fabricacao_iso": "2026-03-27", "validade": "04/04/2026", "validade_iso": "2026-04-04", "vida_total_dias": 8, "saldo_un": 17.0, "saldo_kg": 17.0}, {"setor": "Iogurte", "produto": "0400300036", "nome": "Natural Desnatado 170g", "lote": "LI00383/26", "fabricacao": "03/06/2026", "fabricacao_iso": "2026-06-03", "validade": "17/07/2026", "validade_iso": "2026-07-17", "vida_total_dias": 44, "saldo_un": 781.0, "saldo_kg": 132.77}, {"setor": "Iogurte", "produto": "0400300037", "nome": "Grego Frutas Verm. 120g", "lote": "LI00500/26", "fabricacao": "18/07/2026", "fabricacao_iso": "2026-07-18", "validade": "31/08/2026", "validade_iso": "2026-08-31", "vida_total_dias": 44, "saldo_un": 1201.0, "saldo_kg": 144.12}, {"setor": "Iogurte", "produto": "0400300037", "nome": "Grego Frutas Verm. 120g", "lote": "LI00511/26", "fabricacao": "23/07/2026", "fabricacao_iso": "2026-07-23", "validade": "05/09/2026", "validade_iso": "2026-09-05", "vida_total_dias": 44, "saldo_un": 1085.0, "saldo_kg": 130.2}, {"setor": "Iogurte", "produto": "0400300033", "nome": "Abacaxi c/ Coco 185g", "lote": "LI00513/26", "fabricacao": "23/07/2026", "fabricacao_iso": "2026-07-23", "validade": "05/09/2026", "validade_iso": "2026-09-05", "vida_total_dias": 44, "saldo_un": 502.0, "saldo_kg": 92.87}, {"setor": "Iogurte", "produto": "0400300032", "nome": "Abacaxi c/ Coco 120g", "lote": "LI00512/26", "fabricacao": "23/07/2026", "fabricacao_iso": "2026-07-23", "validade": "05/09/2026", "validade_iso": "2026-09-05", "vida_total_dias": 44, "saldo_un": 4023.0, "saldo_kg": 482.76}, {"setor": "Iogurte", "produto": "0400300041", "nome": "Abacaxi c/ Coco 900g", "lote": "LI00514/26", "fabricacao": "23/07/2026", "fabricacao_iso": "2026-07-23", "validade": "05/09/2026", "validade_iso": "2026-09-05", "vida_total_dias": 44, "saldo_un": 1493.0, "saldo_kg": 1343.7}, {"setor": "Iogurte", "produto": "0400300039", "nome": "Coco 900g", "lote": "LI00517/26", "fabricacao": "23/07/2026", "fabricacao_iso": "2026-07-23", "validade": "05/09/2026", "validade_iso": "2026-09-05", "vida_total_dias": 44, "saldo_un": 978.0, "saldo_kg": 880.2}, {"setor": "Iogurte", "produto": "0400300015", "nome": "Coco 185g", "lote": "LI00516/26", "fabricacao": "23/07/2026", "fabricacao_iso": "2026-07-23", "validade": "05/09/2026", "validade_iso": "2026-09-05", "vida_total_dias": 44, "saldo_un": 465.0, "saldo_kg": 86.03}, {"setor": "Iogurte", "produto": "0400300023", "nome": "Coco 120g", "lote": "LI00515/26", "fabricacao": "23/07/2026", "fabricacao_iso": "2026-07-23", "validade": "05/09/2026", "validade_iso": "2026-09-05", "vida_total_dias": 44, "saldo_un": 3581.0, "saldo_kg": 429.72}, {"setor": "Iogurte", "produto": "0400300039", "nome": "Coco 900g", "lote": "LI00521/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "06/09/2026", "validade_iso": "2026-09-06", "vida_total_dias": 44, "saldo_un": 1630.0, "saldo_kg": 1467.0}, {"setor": "Iogurte", "produto": "0400300036", "nome": "Natural Desnatado 170g", "lote": "LI00522/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "06/09/2026", "validade_iso": "2026-09-06", "vida_total_dias": 44, "saldo_un": 3757.0, "saldo_kg": 638.69}, {"setor": "Iogurte", "produto": "0400300038", "nome": "Morango 900g", "lote": "LI00520/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "06/09/2026", "validade_iso": "2026-09-06", "vida_total_dias": 44, "saldo_un": 1088.0, "saldo_kg": 979.2}, {"setor": "Iogurte", "produto": "0400300019", "nome": "Morango 120g", "lote": "LI00518/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "06/09/2026", "validade_iso": "2026-09-06", "vida_total_dias": 44, "saldo_un": 5888.0, "saldo_kg": 706.56}, {"setor": "Iogurte", "produto": "0400300007", "nome": "Morango 185g", "lote": "LI00519/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "06/09/2026", "validade_iso": "2026-09-06", "vida_total_dias": 44, "saldo_un": 957.0, "saldo_kg": 177.04}, {"setor": "Doce", "produto": "0400500012", "nome": "Cacau 5kg Bag", "lote": "LD00265/26", "fabricacao": "24/04/2026", "fabricacao_iso": "2026-04-24", "validade": "19/10/2026", "validade_iso": "2026-10-19", "vida_total_dias": 178, "saldo_un": 14.0, "saldo_kg": 70.0}, {"setor": "Requeijão", "produto": "0400900004", "nome": "Creme de Ricota 200g", "lote": "LR00125/26", "fabricacao": "22/07/2026", "fabricacao_iso": "2026-07-22", "validade": "19/10/2026", "validade_iso": "2026-10-19", "vida_total_dias": 89, "saldo_un": 846.0, "saldo_kg": 169.2}, {"setor": "Queijo", "produto": "0400700002", "nome": "Mussarela 3kg", "lote": "LQ00113/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "21/10/2026", "validade_iso": "2026-10-21", "vida_total_dias": 89, "saldo_un": 546.85, "saldo_kg": 546.85}, {"setor": "Requeijão", "produto": "0400900002", "nome": "Requeijão 400g", "lote": "LR00124/26", "fabricacao": "21/07/2026", "fabricacao_iso": "2026-07-21", "validade": "28/10/2026", "validade_iso": "2026-10-28", "vida_total_dias": 99, "saldo_un": 3515.0, "saldo_kg": 1406.0}, {"setor": "Requeijão", "produto": "0400900003", "nome": "Requeijão Copo 200g", "lote": "LR00123/26", "fabricacao": "21/07/2026", "fabricacao_iso": "2026-07-21", "validade": "28/10/2026", "validade_iso": "2026-10-28", "vida_total_dias": 99, "saldo_un": 1599.0, "saldo_kg": 319.8}, {"setor": "Manteiga", "produto": "0400600001", "nome": "Manteiga 200g", "lote": "LM00116/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "29/11/2026", "validade_iso": "2026-11-29", "vida_total_dias": 128, "saldo_un": 1200.0, "saldo_kg": 240.0}, {"setor": "Manteiga", "produto": "0400600001", "nome": "Manteiga 200g", "lote": "LM00117/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "29/11/2026", "validade_iso": "2026-11-29", "vida_total_dias": 128, "saldo_un": 1281.0, "saldo_kg": 256.2}, {"setor": "Manteiga", "produto": "0400600002", "nome": "Manteiga 500g", "lote": "LM00118/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "29/11/2026", "validade_iso": "2026-11-29", "vida_total_dias": 128, "saldo_un": 504.0, "saldo_kg": 252.0}, {"setor": "Doce", "produto": "0400500019", "nome": "Zero Açúcar/Lactose 400g", "lote": "LD00417/26", "fabricacao": "16/06/2026", "fabricacao_iso": "2026-06-16", "validade": "08/12/2026", "validade_iso": "2026-12-08", "vida_total_dias": 175, "saldo_un": 3108.0, "saldo_kg": 1243.2}, {"setor": "Doce", "produto": "0400500008", "nome": "Tradicional 800g", "lote": "LD00421/26", "fabricacao": "15/06/2026", "fabricacao_iso": "2026-06-15", "validade": "09/12/2026", "validade_iso": "2026-12-09", "vida_total_dias": 177, "saldo_un": 3129.0, "saldo_kg": 2503.2}, {"setor": "Doce", "produto": "0400500008", "nome": "Tradicional 800g", "lote": "LD00536/26", "fabricacao": "20/07/2026", "fabricacao_iso": "2026-07-20", "validade": "16/01/2027", "validade_iso": "2027-01-16", "vida_total_dias": 180, "saldo_un": 3151.0, "saldo_kg": 2520.8}, {"setor": "Doce", "produto": "0400500004", "nome": "Tradicional 400g", "lote": "LD00544/26", "fabricacao": "22/07/2026", "fabricacao_iso": "2026-07-22", "validade": "17/01/2027", "validade_iso": "2027-01-17", "vida_total_dias": 179, "saldo_un": 6483.0, "saldo_kg": 2593.2}, {"setor": "Doce", "produto": "0400500004", "nome": "Tradicional 400g", "lote": "LD00543/26", "fabricacao": "22/07/2026", "fabricacao_iso": "2026-07-22", "validade": "17/01/2027", "validade_iso": "2027-01-17", "vida_total_dias": 179, "saldo_un": 5643.0, "saldo_kg": 2257.2}, {"setor": "Doce", "produto": "0400500011", "nome": "Tradicional 5kg Bag", "lote": "LD00542/26", "fabricacao": "22/07/2026", "fabricacao_iso": "2026-07-22", "validade": "17/01/2027", "validade_iso": "2027-01-17", "vida_total_dias": 179, "saldo_un": 522.0, "saldo_kg": 2610.0}, {"setor": "Doce", "produto": "0400500019", "nome": "Zero Açúcar/Lactose 400g", "lote": "LD00541/26", "fabricacao": "21/07/2026", "fabricacao_iso": "2026-07-21", "validade": "17/01/2027", "validade_iso": "2027-01-17", "vida_total_dias": 180, "saldo_un": 5500.0, "saldo_kg": 2200.0}, {"setor": "Doce", "produto": "0400500004", "nome": "Tradicional 400g", "lote": "LD00547/26", "fabricacao": "23/07/2026", "fabricacao_iso": "2026-07-23", "validade": "18/01/2027", "validade_iso": "2027-01-18", "vida_total_dias": 179, "saldo_un": 6643.0, "saldo_kg": 2657.2}, {"setor": "Doce", "produto": "0400500004", "nome": "Tradicional 400g", "lote": "LD00548/26", "fabricacao": "23/07/2026", "fabricacao_iso": "2026-07-23", "validade": "18/01/2027", "validade_iso": "2027-01-18", "vida_total_dias": 179, "saldo_un": 5730.0, "saldo_kg": 2292.0}, {"setor": "Doce", "produto": "0400500019", "nome": "Zero Açúcar/Lactose 400g", "lote": "LD00545/26", "fabricacao": "22/07/2026", "fabricacao_iso": "2026-07-22", "validade": "18/01/2027", "validade_iso": "2027-01-18", "vida_total_dias": 180, "saldo_un": 5370.0, "saldo_kg": 2148.0}, {"setor": "Doce", "produto": "0400500004", "nome": "Tradicional 400g", "lote": "LD00550/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "19/01/2027", "validade_iso": "2027-01-19", "vida_total_dias": 179, "saldo_un": 6168.0, "saldo_kg": 2467.2}, {"setor": "Doce", "produto": "0400500011", "nome": "Tradicional 5kg Bag", "lote": "LD00551/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "19/01/2027", "validade_iso": "2027-01-19", "vida_total_dias": 179, "saldo_un": 502.0, "saldo_kg": 2510.0}, {"setor": "Doce", "produto": "0400500019", "nome": "Zero Açúcar/Lactose 400g", "lote": "LD00552/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "19/01/2027", "validade_iso": "2027-01-19", "vida_total_dias": 179, "saldo_un": 4905.0, "saldo_kg": 1962.0}, {"setor": "Doce", "produto": "0400500019", "nome": "Zero Açúcar/Lactose 400g", "lote": "LD00553/26", "fabricacao": "24/07/2026", "fabricacao_iso": "2026-07-24", "validade": "20/01/2027", "validade_iso": "2027-01-20", "vida_total_dias": 180, "saldo_un": 5801.0, "saldo_kg": 2320.4}]};
+const THEME = {"name": "Produtos Viçosa - Aderência de Produção", "dataColors": ["#1B5E3A", "#0277BD", "#C68642", "#6B8E23", "#B8860B", "#2E7D32", "#4A90A4", "#8B5A2B", "#3599B8", "#DFBFBF", "#4AC5BB", "#5F6B6D", "#FB8281", "#F4D25A", "#7F898A", "#A4DDEE", "#FDAB89", "#B687AC", "#28738A", "#A78F8F", "#168980", "#293537", "#BB4A4A", "#B59525", "#475052", "#6A9FB0", "#BD7150", "#7B4F71", "#1B4D5C", "#706060", "#0F5C55", "#1C2325"], "good": "#2E7D32", "neutral": "#C68642", "bad": "#B00020", "minimum": "#B00020", "center": "#C68642", "maximum": "#2E7D32", "background": "#FFFFFF", "foreground": "#2D2D2D", "tableAccent": "#1B5E3A", "textClasses": {"callout": {"fontSize": 32, "color": "#1B5E3A", "fontFace": "Segoe UI Semibold"}, "title": {"fontSize": 14, "color": "#2D2D2D", "fontFace": "Segoe UI Semibold"}, "label": {"fontSize": 10, "color": "#2D2D2D", "fontFace": "Segoe UI"}}, "visualStyles": {"*": {"*": {"background": [{"color": {"solid": {"color": "#FFFFFF"}}, "transparency": 0}], "border": [{"show": true, "color": {"solid": {"color": "#E0E0E0"}}, "radius": 6}]}}, "card": {"*": {"labels": [{"color": {"solid": {"color": "#1B5E3A"}}, "fontSize": 32}], "categoryLabels": [{"color": {"solid": {"color": "#2D2D2D"}}, "fontSize": 11}]}}, "slicer": {"*": {"background": [{"color": {"solid": {"color": "#F7F5F0"}}}], "header": [{"fontColor": {"solid": {"color": "#1B5E3A"}}, "background": {"solid": {"color": "#F7F5F0"}}, "fontSize": 11}]}}}};
 
-document.getElementById('geradoEm').textContent = 'Atualizado em ' + DATA.gerado_em;
+document.getElementById('geradoEm').textContent =
+  'Atualizado em ' + DATA.data_arquivo + ' · dados gerados em ' + DATA.gerado_em;
 
 // ---------------------------------------------------------------
 // Painel lateral recolhível (o estado marcado fica salvo no navegador)
@@ -414,12 +303,6 @@ document.getElementById('geradoEm').textContent = 'Atualizado em ' + DATA.gerado
   });
 })();
 
-function resolveVar(name) {
-  return getComputedStyle(document.querySelector('.viz-root')).getPropertyValue(name).trim();
-}
-const seriesVars = ['--series-1','--series-2','--series-3','--series-4','--series-5','--series-6','--series-7','--series-8'];
-function seriesColor(i) { return resolveVar(seriesVars[i % seriesVars.length]); }
-
 function formatNum(n) {
   if (n === null || n === undefined) return '-';
   return n.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
@@ -428,6 +311,7 @@ function formatMil(n) {
   if (n === null || n === undefined) return '-';
   return (n / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' Mil';
 }
+function round2(n) { return Math.round(n * 100) / 100; }
 
 // ---------------------------------------------------------------
 // Tabelas com colunas clicáveis (ordenação) — clique 1x ordena
@@ -469,31 +353,8 @@ function th(label, key, tableId, extraClass) {
 }
 
 // ---------------------------------------------------------------
-// Navegação entre páginas
+// Componente: multi-seleção com checkboxes (mesmo padrão dos outros painéis)
 // ---------------------------------------------------------------
-document.querySelectorAll('nav.tabs button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('page-' + btn.dataset.page).classList.add('active');
-    if (btn.dataset.page === 'geral') Plotly.Plots.resize('chartGeralLinha'), Plotly.Plots.resize('chartGeralSetor');
-    if (btn.dataset.page === 'familia') Plotly.Plots.resize('chartFamiliaLinha'), Plotly.Plots.resize('chartFamiliaWaterfall');
-  });
-});
-
-function fatiaPeriodo(arr, periodo) {
-  if (periodo === 'all') return arr;
-  return arr.slice(-parseInt(periodo, 10));
-}
-
-// ---------------------------------------------------------------
-// Componente: multi-seleção com checkboxes
-// ---------------------------------------------------------------
-// `options` aceita um array de strings, ou um array de {value,label} quando
-// o rótulo exibido precisa ser diferente do valor usado para filtrar
-// (ex: Produto — mostra o nome, filtra pelo código).
-// `initialSelected` aceita 'all' (padrão) ou um array de valores.
 function createMultiSelect(containerId, options, initialSelected) {
   const container = document.getElementById(containerId);
   const norm = options.map(o => (typeof o === 'string' ? { value: o, label: o } : o));
@@ -507,14 +368,12 @@ function createMultiSelect(containerId, options, initialSelected) {
     const found = norm.find(o => o.value === value);
     return found ? found.label : value;
   }
-
   function buttonLabel() {
     if (selected.size === 0) return 'Nenhum selecionado';
     if (selected.size === norm.length) return 'Todos';
     if (selected.size <= 2) return [...selected].map(labelFor).join(', ');
     return `${selected.size} selecionados`;
   }
-
   function render() {
     container.innerHTML = `
       <button type="button" class="multiselect-btn"><span class="ms-label">${buttonLabel()}</span></button>
@@ -528,12 +387,9 @@ function createMultiSelect(containerId, options, initialSelected) {
             <span>${o.label}</span>
           </label>`).join('')}
       </div>`;
-
     container.querySelector('.multiselect-btn').addEventListener('click', (e) => {
       e.stopPropagation();
-      document.querySelectorAll('.multiselect.open').forEach(el => {
-        if (el !== container) el.classList.remove('open');
-      });
+      document.querySelectorAll('.multiselect.open').forEach(el => { if (el !== container) el.classList.remove('open'); });
       container.classList.toggle('open');
     });
     container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
@@ -543,224 +399,20 @@ function createMultiSelect(containerId, options, initialSelected) {
         if (onChangeCb) onChangeCb();
       });
     });
-    container.querySelector('[data-action="all"]').addEventListener('click', () => {
-      selected = new Set(allValues);
-      render();
-      if (onChangeCb) onChangeCb();
-    });
-    container.querySelector('[data-action="none"]').addEventListener('click', () => {
-      selected = new Set();
-      render();
-      if (onChangeCb) onChangeCb();
-    });
+    container.querySelector('[data-action="all"]').addEventListener('click', () => { selected = new Set(allValues); render(); if (onChangeCb) onChangeCb(); });
+    container.querySelector('[data-action="none"]').addEventListener('click', () => { selected = new Set(); render(); if (onChangeCb) onChangeCb(); });
   }
-
   render();
-
-  return {
-    getSelected: () => selected,
-    getSelectedLabels: () => [...selected].map(labelFor),
-    onChange: (cb) => { onChangeCb = cb; },
-  };
+  return { getSelected: () => selected, getSelectedLabels: () => [...selected].map(labelFor), onChange: (cb) => { onChangeCb = cb; } };
 }
-
-document.addEventListener('click', () => {
-  document.querySelectorAll('.multiselect.open').forEach(el => el.classList.remove('open'));
-});
-
-// =================================================================
-// PÁGINA 1 — VISÃO GERAL
-// =================================================================
-function renderGeral() {
-  const periodo = document.getElementById('geralPeriodo').value;
-  const datas = fatiaPeriodo(DATA.evolucao_geral.datas, periodo);
-  const totalKg = fatiaPeriodo(DATA.evolucao_geral.total_kg, periodo);
-
-  const atual = totalKg[totalKg.length - 1];
-  const anterior = totalKg.length > 1 ? totalKg[totalKg.length - 2] : null;
-  const diff = anterior !== null ? atual - anterior : null;
-  const pct = anterior ? (diff / anterior) * 100 : null;
-
-  const statRow = document.getElementById('geralStatRow');
-  statRow.innerHTML = `
-    <div class="stat-tile">
-      <div class="label">Saldo Atual (kg)</div>
-      <div class="value">${formatMil(atual)}</div>
-    </div>
-    <div class="stat-tile">
-      <div class="label">Variação % (kg)</div>
-      <div class="value" style="font-size:22px">${pct !== null ? pct.toFixed(1) + '%' : '-'}</div>
-    </div>
-    <div class="stat-tile">
-      <div class="label">Diferença diária (kg)</div>
-      <div class="value" style="font-size:22px">${diff !== null ? formatMil(diff) : '-'}</div>
-    </div>`;
-
-  const traceLinha = {
-    x: datas, y: totalKg,
-    type: 'scatter', mode: 'lines+markers+text',
-    line: { color: resolveVar('--brand'), width: 2 },
-    marker: { size: 7, color: resolveVar('--brand') },
-    text: totalKg.map(formatMil), textposition: 'top center',
-    textfont: { size: 10, color: resolveVar('--text-secondary') },
-    hovertemplate: '%{x}<br>%{y:,.0f} kg<extra></extra>',
-  };
-  Plotly.newPlot('chartGeralLinha', [traceLinha], baseLayout(), { displayModeBar: false, responsive: true });
-
-  // Saldo por Setor — barras horizontais, última data do período
-  const setores = Object.keys(DATA.evolucao_geral.por_setor)
-    .map(s => ({ setor: s, valor: DATA.evolucao_geral.por_setor[s][DATA.evolucao_geral.datas.length - 1] }))
-    .sort((a, b) => b.valor - a.valor);
-
-  const traceSetor = {
-    x: setores.map(s => s.valor),
-    y: setores.map(s => s.setor),
-    type: 'bar', orientation: 'h',
-    marker: { color: resolveVar('--brand') },
-    text: setores.map(s => formatMil(s.valor)),
-    textposition: 'outside',
-    hovertemplate: '%{y}: %{x:,.0f} kg<extra></extra>',
-  };
-  const layoutSetor = baseLayout();
-  layoutSetor.yaxis.autorange = 'reversed';
-  layoutSetor.margin.l = 90;
-  layoutSetor.margin.r = 70;
-  const maxSetorValor = Math.max(...setores.map(s => s.valor), 0);
-  layoutSetor.xaxis.range = [0, maxSetorValor * 1.18];
-  Plotly.newPlot('chartGeralSetor', [traceSetor], layoutSetor, { displayModeBar: false, responsive: true });
-}
-
-function baseLayout() {
-  return {
-    margin: { l: 55, r: 20, t: 10, b: 40 },
-    paper_bgcolor: 'transparent',
-    plot_bgcolor: 'transparent',
-    font: { family: '"Segoe UI", sans-serif', color: resolveVar('--text-secondary'), size: 12 },
-    xaxis: { gridcolor: resolveVar('--gridline'), linecolor: resolveVar('--baseline'), tickfont: { color: resolveVar('--text-muted') } },
-    yaxis: { gridcolor: resolveVar('--gridline'), linecolor: resolveVar('--baseline'), tickfont: { color: resolveVar('--text-muted') }, rangemode: 'tozero' },
-    showlegend: false,
-  };
-}
-
-document.getElementById('geralPeriodo').addEventListener('change', renderGeral);
-
-// =================================================================
-// PÁGINA 2 — FAMÍLIA / SKU
-// =================================================================
-const setoresDisponiveis = Object.keys(DATA.evolucao_sku.por_setor_sku).sort();
-const familiaSetorMultiselect = createMultiSelect('familiaSetor', setoresDisponiveis, [setoresDisponiveis[0]]);
-
-function renderFamilia() {
-  const setoresSelecionados = [...familiaSetorMultiselect.getSelected()];
-  const periodo = document.getElementById('familiaPeriodo').value;
-  const datas = fatiaPeriodo(DATA.evolucao_sku.datas, periodo);
-
-  const tituloSetor = setoresSelecionados.length === 0
-    ? 'nenhum setor selecionado'
-    : setoresSelecionados.length <= 2
-      ? setoresSelecionados.join(', ')
-      : `${setoresSelecionados.length} setores`;
-  document.getElementById('familiaLinhaTitle').textContent = `Saldo disponível (kg) x Data — ${tituloSetor}`;
-  document.getElementById('familiaWaterfallTitle').textContent = `Saldo disponível (kg) x SKU — ${tituloSetor}`;
-
-  if (setoresSelecionados.length === 0) {
-    Plotly.newPlot('chartFamiliaLinha', [], baseLayout(), { displayModeBar: false, responsive: true });
-    Plotly.newPlot('chartFamiliaWaterfall', [], baseLayout(), { displayModeBar: false, responsive: true });
-    return;
-  }
-
-  // Junta os SKUs de todos os setores selecionados. Prefixa com o nome do
-  // setor quando mais de um estiver selecionado, para evitar ambiguidade.
-  const skuMap = {};
-  setoresSelecionados.forEach(setor => {
-    const mapaDoSetor = DATA.evolucao_sku.por_setor_sku[setor] || {};
-    Object.entries(mapaDoSetor).forEach(([sku, serie]) => {
-      const chave = setoresSelecionados.length > 1 ? `${setor} — ${sku}` : sku;
-      skuMap[chave] = serie;
-    });
-  });
-
-  const totalPorDia = datas.map((_, i) => {
-    const idxOffset = DATA.evolucao_sku.datas.length - datas.length;
-    return Object.values(skuMap).reduce((acc, serie) => acc + serie[i + idxOffset], 0);
-  });
-
-  const traceLinha = {
-    x: datas, y: totalPorDia,
-    type: 'scatter', mode: 'lines+markers+text',
-    line: { color: resolveVar('--brand'), width: 2 },
-    marker: { size: 7, color: resolveVar('--brand') },
-    text: totalPorDia.map(formatMil), textposition: 'top center',
-    textfont: { size: 10, color: resolveVar('--text-secondary') },
-    hovertemplate: '%{x}<br>%{y:,.0f} kg<extra></extra>',
-  };
-  Plotly.newPlot('chartFamiliaLinha', [traceLinha], baseLayout(), { displayModeBar: false, responsive: true });
-
-  // Waterfall por SKU, última data do período selecionado
-  const idxUltima = DATA.evolucao_sku.datas.length - 1;
-  const skus = Object.keys(skuMap)
-    .map(sku => ({ sku, valor: skuMap[sku][idxUltima] }))
-    .filter(s => s.valor > 0)
-    .sort((a, b) => b.valor - a.valor);
-
-  const total = skus.reduce((acc, s) => acc + s.valor, 0);
-
-  const traceWaterfall = {
-    type: 'waterfall',
-    orientation: 'v',
-    x: [...skus.map(s => s.sku), 'Total'],
-    y: [...skus.map(s => s.valor), total],
-    measure: [...skus.map(() => 'relative'), 'total'],
-    text: [...skus.map(s => formatMil(s.valor)), formatMil(total)],
-    textposition: 'outside',
-    connector: { line: { color: resolveVar('--gridline') } },
-    increasing: { marker: { color: resolveVar('--brand') } },
-    totals: { marker: { color: resolveVar('--text-secondary') } },
-    hovertemplate: '%{x}: %{y:,.0f} kg<extra></extra>',
-  };
-  const layoutWaterfall = baseLayout();
-  layoutWaterfall.margin.b = 90;
-  layoutWaterfall.xaxis.tickangle = -35;
-  Plotly.newPlot('chartFamiliaWaterfall', [traceWaterfall], layoutWaterfall, { displayModeBar: false, responsive: true });
-}
-
-familiaSetorMultiselect.onChange(renderFamilia);
-document.getElementById('familiaPeriodo').addEventListener('change', renderFamilia);
-
-// =================================================================
-// PÁGINA 3 — LOTES E VALIDADE
-// =================================================================
-const lotesSetorMultiselect = createMultiSelect('lotesSetor', DATA.filtros.setores, 'all');
-const lotesDataSelect = document.getElementById('lotesData');
-
-lotesDataSelect.innerHTML = DATA.filtros.datas.map(d => `<option value="${d}">${d}</option>`).join('');
-lotesDataSelect.value = DATA.filtros.datas[DATA.filtros.datas.length - 1];
-
-let lotesProdutoMultiselect = null;
-
-function popularProdutosLotes() {
-  const setoresSelecionados = lotesSetorMultiselect.getSelected();
-  const produtos = DATA.filtros.produtos.filter(p => setoresSelecionados.has(p.setor));
-  lotesProdutoMultiselect = createMultiSelect(
-    'lotesProduto',
-    produtos.map(p => ({ value: p.codigo, label: p.nome })),
-    'all'
-  );
-  lotesProdutoMultiselect.onChange(renderLotes);
-}
-popularProdutosLotes();
-lotesSetorMultiselect.onChange(() => { popularProdutosLotes(); renderLotes(); });
+document.addEventListener('click', () => { document.querySelectorAll('.multiselect.open').forEach(el => el.classList.remove('open')); });
 
 // ---------------------------------------------------------------
 // Cálculo de validade em relação à data real de HOJE (data/hora do
-// dispositivo de quem está vendo a página no momento do carregamento —
-// um site estático como este não tem um "relógio de servidor" próprio,
-// então usamos o relógio real de quem abriu a página).
+// dispositivo de quem está vendo a página no momento do carregamento).
 // ---------------------------------------------------------------
 const HOJE = new Date();
 HOJE.setHours(0, 0, 0, 0);
-document.getElementById('lotesHojeNota').textContent =
-  `"Dias até vencer" calculado a partir de hoje: ${HOJE.toLocaleDateString('pt-BR')}`;
 
 function calcularValidadeReal(l) {
   if (!l.validade_iso) return { dias: null, pct: null };
@@ -773,7 +425,6 @@ function calcularValidadeReal(l) {
     : null;
   return { dias, pct };
 }
-function round2(n) { return Math.round(n * 100) / 100; }
 
 function badgeValidade(pct, dias) {
   if (dias === null || dias === undefined) return '';
@@ -784,7 +435,7 @@ function badgeValidade(pct, dias) {
 }
 
 function montarTabela(linhas, incluirPctValidade, tableId) {
-  if (linhas.length === 0) return '<div class="empty">Nenhum lote encontrado para o filtro selecionado.</div>';
+  if (linhas.length === 0) return '<div class="empty">Nenhum produto encontrado para o filtro selecionado.</div>';
 
   const tipos = {
     lote: 'string', nome: 'string', fabricacao_iso: 'string', validade_iso: 'string',
@@ -827,12 +478,31 @@ function montarTabela(linhas, incluirPctValidade, tableId) {
     </table>`;
 }
 
-function renderLotes() {
-  const setoresSelecionados = lotesSetorMultiselect.getSelected();
-  const produtosSelecionados = lotesProdutoMultiselect ? lotesProdutoMultiselect.getSelected() : null;
-  const data = lotesDataSelect.value;
+// ---------------------------------------------------------------
+// Filtros (Setor -> Produto em cascata, sem filtro de data — o BD_022
+// é um snapshot único, sobrescrito quando a leitura é atualizada)
+// ---------------------------------------------------------------
+const e22SetorMultiselect = createMultiSelect('e22Setor', DATA.filtros.setores, 'all');
+let e22ProdutoMultiselect = null;
 
-  const todos = (DATA.lotes_por_data[data] || []).filter(l =>
+function popularProdutosE22() {
+  const setoresSelecionados = e22SetorMultiselect.getSelected();
+  const produtos = DATA.filtros.produtos.filter(p => setoresSelecionados.has(p.setor));
+  e22ProdutoMultiselect = createMultiSelect(
+    'e22Produto',
+    produtos.map(p => ({ value: p.codigo, label: p.nome })),
+    'all'
+  );
+  e22ProdutoMultiselect.onChange(renderE22);
+}
+popularProdutosE22();
+e22SetorMultiselect.onChange(() => { popularProdutosE22(); renderE22(); });
+
+function renderE22() {
+  const setoresSelecionados = e22SetorMultiselect.getSelected();
+  const produtosSelecionados = e22ProdutoMultiselect ? e22ProdutoMultiselect.getSelected() : null;
+
+  const todos = DATA.lotes.filter(l =>
     setoresSelecionados.has(l.setor) && (!produtosSelecionados || produtosSelecionados.has(l.produto))
   ).map(l => ({ ...l, ...(() => { const r = calcularValidadeReal(l); return { dias_real: r.dias, pct_real: r.pct }; })() }));
 
@@ -844,7 +514,7 @@ function renderLotes() {
   const vencidos = todos.filter(l => l.dias_real !== null && l.dias_real < 0)
     .sort((a, b) => a.dias_real - b.dias_real);
 
-  document.getElementById('lotesStatRow').innerHTML = `
+  document.getElementById('e22StatRow').innerHTML = `
     <div class="stat-tile">
       <div class="label">Saldo Atual (un)</div>
       <div class="value">${formatMil(saldoUnTotal)}</div>
@@ -863,24 +533,17 @@ function renderLotes() {
     </div>`;
 
   const naoVencidos = todos.filter(l => l.dias_real === null || l.dias_real >= 0);
-  document.getElementById('tabelaTodos').innerHTML = montarTabela(
-    naoVencidos.sort((a, b) => (a.dias_real ?? 9999) - (b.dias_real ?? 9999)), true, 'tabelaTodos'
+  document.getElementById('e22TabelaTodos').innerHTML = montarTabela(
+    naoVencidos.sort((a, b) => (a.dias_real ?? 9999) - (b.dias_real ?? 9999)), true, 'e22TabelaTodos'
   );
-  document.getElementById('tabelaAtencao').innerHTML = montarTabela(atencao, true, 'tabelaAtencao');
-  document.getElementById('tabelaVencidos').innerHTML = montarTabela(vencidos, false, 'tabelaVencidos');
-  registrarOrdenacao('tabelaTodos', renderLotes);
-  registrarOrdenacao('tabelaAtencao', renderLotes);
-  registrarOrdenacao('tabelaVencidos', renderLotes);
+  document.getElementById('e22TabelaAtencao').innerHTML = montarTabela(atencao, true, 'e22TabelaAtencao');
+  document.getElementById('e22TabelaVencidos').innerHTML = montarTabela(vencidos, false, 'e22TabelaVencidos');
+  registrarOrdenacao('e22TabelaTodos', renderE22);
+  registrarOrdenacao('e22TabelaAtencao', renderE22);
+  registrarOrdenacao('e22TabelaVencidos', renderE22);
 }
 
-lotesDataSelect.addEventListener('change', renderLotes);
-
-// ---------------------------------------------------------------
-// Inicialização
-// ---------------------------------------------------------------
-renderGeral();
-renderFamilia();
-renderLotes();
+renderE22();
 </script>
 </body>
 </html>
