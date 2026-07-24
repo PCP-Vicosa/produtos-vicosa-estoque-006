@@ -696,7 +696,7 @@ function montarTabela(linhas, incluirPctValidade) {
             <td>${l.validade || '-'}</td>
             <td class="num">${formatNum(l.saldo_un)}</td>
             <td class="num">${formatNum(l.saldo_kg)}</td>
-            <td class="num">${dias !== null ? dias : '-'}</td>
+            <td class="num">${dias !== null ? (dias < 0 ? 'Vencido' : dias) : '-'}</td>
             ${incluirPctValidade ? `<td class="num">${pct !== null ? pct.toFixed(2) + '%' : '-'}</td>` : ''}
             <td>${badgeValidade(pct, dias)}</td>
           </tr>`;
@@ -740,8 +740,9 @@ function renderLotes() {
       <div class="value" style="color: var(--critical)">${vencidos.length}</div>
     </div>`;
 
+  const naoVencidos = todos.filter(l => l.dias_real === null || l.dias_real >= 0);
   document.getElementById('tabelaTodos').innerHTML = montarTabela(
-    todos.sort((a, b) => (a.dias_real ?? 9999) - (b.dias_real ?? 9999)), true
+    naoVencidos.sort((a, b) => (a.dias_real ?? 9999) - (b.dias_real ?? 9999)), true
   );
   document.getElementById('tabelaAtencao').innerHTML = montarTabela(atencao, true);
   document.getElementById('tabelaVencidos').innerHTML = montarTabela(vencidos, true);
