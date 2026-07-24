@@ -175,7 +175,10 @@ def montar_lotes_por_data(df: pd.DataFrame) -> dict:
         grupo = grupo[grupo["Saldo Lote"] > 0]
         linhas = []
         for _, row in grupo.iterrows():
-            dias_para_vencer = (
+            # dias/pct calculados com base na data da leitura (snapshot) —
+            # mantidos apenas como referência histórica; o dashboard recalcula
+            # esses valores no navegador em relação à data real de hoje.
+            dias_para_vencer_snapshot = (
                 (row["Data Validade"] - data).days
                 if pd.notna(row["Data Validade"]) else None
             )
@@ -184,9 +187,9 @@ def montar_lotes_por_data(df: pd.DataFrame) -> dict:
                 if pd.notna(row["Data Validade"]) and pd.notna(row["Data Fab. Lote"])
                 else None
             )
-            pct_validade = (
-                round(100 * dias_para_vencer / vida_total, 2)
-                if vida_total and vida_total > 0 and dias_para_vencer is not None
+            pct_validade_snapshot = (
+                round(100 * dias_para_vencer_snapshot / vida_total, 2)
+                if vida_total and vida_total > 0 and dias_para_vencer_snapshot is not None
                 else None
             )
             linhas.append({
@@ -196,10 +199,15 @@ def montar_lotes_por_data(df: pd.DataFrame) -> dict:
                 "lote": str(row["Lote Fab."]),
                 "fabricacao": fmt_data(row["Data Fab. Lote"]),
                 "validade": fmt_data(row["Data Validade"]),
+                "validade_iso": (
+                    row["Data Validade"].strftime("%Y-%m-%d")
+                    if pd.notna(row["Data Validade"]) else None
+                ),
+                "vida_total_dias": vida_total,
                 "saldo_un": round(float(row["Saldo Lote"]), 2),
                 "saldo_kg": round(float(row["Saldo KG"]), 2),
-                "dias_para_vencer": dias_para_vencer,
-                "pct_validade": pct_validade,
+                "dias_para_vencer_snapshot": dias_para_vencer_snapshot,
+                "pct_validade_snapshot": pct_validade_snapshot,
             })
         resultado[fmt_data(data)] = linhas
     return resultado

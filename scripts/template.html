@@ -248,6 +248,10 @@
         <label for="lotesData">Leitura (data)</label>
         <select id="lotesData"></select>
       </div>
+      <div class="filter-group">
+        <label>&nbsp;</label>
+        <span class="subtitle" id="lotesHojeNota" style="padding: 7px 0;"></span>
+      </div>
     </div>
 
     <div class="stat-row" id="lotesStatRow"></div>
@@ -575,12 +579,36 @@ function popularProdutosLotes() {
 popularProdutosLotes();
 lotesSetorMultiselect.onChange(() => { popularProdutosLotes(); renderLotes(); });
 
+// ---------------------------------------------------------------
+// Cálculo de validade em relação à data real de HOJE (data/hora do
+// dispositivo de quem está vendo a página no momento do carregamento —
+// um site estático como este não tem um "relógio de servidor" próprio,
+// então usamos o relógio real de quem abriu a página).
+// ---------------------------------------------------------------
+const HOJE = new Date();
+HOJE.setHours(0, 0, 0, 0);
+document.getElementById('lotesHojeNota').textContent =
+  `"Dias até vencer" calculado a partir de hoje: ${HOJE.toLocaleDateString('pt-BR')}`;
+
+function calcularValidadeReal(l) {
+  if (!l.validade_iso) return { dias: null, pct: null };
+  const [ano, mes, dia] = l.validade_iso.split('-').map(Number);
+  const validade = new Date(ano, mes - 1, dia);
+  validade.setHours(0, 0, 0, 0);
+  const dias = Math.round((validade - HOJE) / 86400000);
+  const pct = (l.vida_total_dias && l.vida_total_dias > 0)
+    ? round2(100 * dias / l.vida_total_dias)
+    : null;
+  return { dias, pct };
+}
+function round2(n) { return Math.round(n * 100) / 100; }
+
 function badgeValidade(pct, dias) {
   if (dias === null || dias === undefined) return '';
   if (dias < 0) return '<span class="badge critical">vencido</span>';
-  if (pct !== null && pct < 15) return `<span class="badge critical">Vence em ${dias} dias</span>`;
-  if (pct !== null && pct < 50) return `<span class="badge warning">Vence em ${dias} dias</span>`;
-  return `<span class="badge good">Vence em ${dias} dias</span>`;
+  if (pct !== null && pct < 15) return `<span class="badge critical">${dias} dia(s)</span>`;
+  if (pct !== null && pct < 50) return `<span class="badge warning">${dias} dia(s)</span>`;
+  return `<span class="badge good">${dias} dia(s)</span>`;
 }
 
 function montarTabela(linhas, incluirPctValidade) {
@@ -595,12 +623,15 @@ function montarTabela(linhas, incluirPctValidade) {
           <th>Validade</th>
           <th class="num">Saldo (un)</th>
           <th class="num">Saldo (kg)</th>
+          <th class="num">Dias até Vencer</th>
           ${incluirPctValidade ? '<th class="num">% Validade Restante</th>' : ''}
           <th>Status</th>
         </tr>
       </thead>
       <tbody>
-        ${linhas.map(l => `
+        ${linhas.map(l => {
+          const { dias, pct } = calcularValidadeReal(l);
+          return `
           <tr>
             <td>${l.lote}</td>
             <td>${l.nome}</td>
@@ -608,9 +639,11 @@ function montarTabela(linhas, incluirPctValidade) {
             <td>${l.validade || '-'}</td>
             <td class="num">${formatNum(l.saldo_un)}</td>
             <td class="num">${formatNum(l.saldo_kg)}</td>
-            ${incluirPctValidade ? `<td class="num">${l.pct_validade !== null ? l.pct_validade.toFixed(2) + '%' : '-'}</td>` : ''}
-            <td>${badgeValidade(l.pct_validade, l.dias_para_vencer)}</td>
-          </tr>`).join('')}
+            <td class="num">${dias !== null ? dias : '-'}</td>
+            ${incluirPctValidade ? `<td class="num">${pct !== null ? pct.toFixed(2) + '%' : '-'}</td>` : ''}
+            <td>${badgeValidade(pct, dias)}</td>
+          </tr>`;
+        }).join('')}
       </tbody>
     </table>`;
 }
@@ -622,15 +655,15 @@ function renderLotes() {
 
   const todos = (DATA.lotes_por_data[data] || []).filter(l =>
     setoresSelecionados.has(l.setor) && (!produtosSelecionados || produtosSelecionados.has(l.produto))
-  );
+  ).map(l => ({ ...l, ...(() => { const r = calcularValidadeReal(l); return { dias_real: r.dias, pct_real: r.pct }; })() }));
 
   const saldoUnTotal = todos.reduce((acc, l) => acc + l.saldo_un, 0);
   const saldoKgTotal = todos.reduce((acc, l) => acc + l.saldo_kg, 0);
 
-  const atencao = todos.filter(l => l.dias_para_vencer !== null && l.dias_para_vencer >= 0 && l.pct_validade !== null && l.pct_validade < 50)
-    .sort((a, b) => a.dias_para_vencer - b.dias_para_vencer);
-  const vencidos = todos.filter(l => l.dias_para_vencer !== null && l.dias_para_vencer < 0)
-    .sort((a, b) => a.dias_para_vencer - b.dias_para_vencer);
+  const atencao = todos.filter(l => l.dias_real !== null && l.dias_real >= 0 && l.pct_real !== null && l.pct_real < 50)
+    .sort((a, b) => a.dias_real - b.dias_real);
+  const vencidos = todos.filter(l => l.dias_real !== null && l.dias_real < 0)
+    .sort((a, b) => a.dias_real - b.dias_real);
 
   document.getElementById('lotesStatRow').innerHTML = `
     <div class="stat-tile">
@@ -651,7 +684,7 @@ function renderLotes() {
     </div>`;
 
   document.getElementById('tabelaTodos').innerHTML = montarTabela(
-    todos.sort((a, b) => (a.dias_para_vencer ?? 9999) - (b.dias_para_vencer ?? 9999)), true
+    todos.sort((a, b) => (a.dias_real ?? 9999) - (b.dias_real ?? 9999)), true
   );
   document.getElementById('tabelaAtencao').innerHTML = montarTabela(atencao, true);
   document.getElementById('tabelaVencidos').innerHTML = montarTabela(vencidos, true);
