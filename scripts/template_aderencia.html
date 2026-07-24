@@ -185,8 +185,12 @@
 
   <div class="card filters">
     <div class="filter-group">
+      <label for="filtroAno">Ano</label>
+      <div class="multiselect" id="filtroAno"></div>
+    </div>
+    <div class="filter-group">
       <label for="filtroMes">Mês</label>
-      <select id="filtroMes"></select>
+      <div class="multiselect" id="filtroMes"></div>
     </div>
     <div class="filter-group">
       <label for="filtroSemana">Semana</label>
@@ -378,9 +382,22 @@ document.addEventListener('click', () => { document.querySelectorAll('.multisele
 // ---------------------------------------------------------------
 // Filtros
 // ---------------------------------------------------------------
-const mesSelect = document.getElementById('filtroMes');
-mesSelect.innerHTML = DATA.filtros.meses.map(m => `<option value="${m.ano}|${m.mes_num}">${m.label}</option>`).join('');
-mesSelect.value = `${DATA.filtros.meses[DATA.filtros.meses.length - 1].ano}|${DATA.filtros.meses[DATA.filtros.meses.length - 1].mes_num}`;
+// Ano -> Mês (múltipla seleção, em cascata: os meses disponíveis dependem
+// dos anos marcados) -> Semana (depende dos meses marcados).
+const anosDisponiveis = [...new Set(DATA.filtros.meses.map(m => String(m.ano)))].sort();
+const anoMultiselect = createMultiSelect('filtroAno', anosDisponiveis, 'all');
+
+let mesMultiselect = null;
+function popularMeses() {
+  const anosSel = anoMultiselect.getSelected();
+  const meses = DATA.filtros.meses.filter(m => anosSel.has(String(m.ano)));
+  mesMultiselect = createMultiSelect(
+    'filtroMes',
+    meses.map(m => ({ value: `${m.ano}|${m.mes_num}`, label: m.label })),
+    'all'
+  );
+  mesMultiselect.onChange(() => { popularSemanas(); renderTudo(); });
+}
 
 function semanasDoMes(ano, mesNum) {
   const nums = [...new Set(DATA.registros.filter(r => r.ano === ano && r.mes_num === mesNum).map(r => r.semana))];
@@ -391,10 +408,22 @@ function semanasDoMes(ano, mesNum) {
   });
 }
 
+function mesesSelecionadosOrdenados() {
+  const mesesSel = mesMultiselect ? mesMultiselect.getSelected() : new Set();
+  return [...mesesSel].map(v => v.split('|').map(Number))
+    .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+}
+
 let semanaMultiselect = null;
 function popularSemanas() {
-  const [ano, mesNum] = mesSelect.value.split('|').map(Number);
-  semanaMultiselect = createMultiSelect('filtroSemana', semanasDoMes(ano, mesNum), 'all');
+  const nums = new Set();
+  mesesSelecionadosOrdenados().forEach(([ano, mesNum]) => semanasDoMes(ano, mesNum).forEach(s => nums.add(s)));
+  const semanas = [...nums].sort((a, b) => {
+    const na = DATA.registros.find(r => r.semana === a).num_semana;
+    const nb = DATA.registros.find(r => r.semana === b).num_semana;
+    return na - nb;
+  });
+  semanaMultiselect = createMultiSelect('filtroSemana', semanas, 'all');
   semanaMultiselect.onChange(renderTudo);
 }
 
@@ -408,10 +437,11 @@ function popularProdutos() {
   produtoMultiselect.onChange(renderTudo);
 }
 
+popularMeses();
 popularSemanas();
 popularProdutos();
 
-mesSelect.addEventListener('change', () => { popularSemanas(); renderTudo(); });
+anoMultiselect.onChange(() => { popularMeses(); popularSemanas(); renderTudo(); });
 setorMultiselect.onChange(() => { popularProdutos(); renderTudo(); });
 
 // ---------------------------------------------------------------
@@ -431,13 +461,15 @@ function calcularIndicadores(regs) {
 }
 
 function registrosFiltrados({ ignorarMes, ignorarSemana } = {}) {
-  const [ano, mesNum] = mesSelect.value.split('|').map(Number);
+  const anosSel = anoMultiselect.getSelected();
+  const mesesSel = mesMultiselect ? mesMultiselect.getSelected() : null;
   const semanasSel = semanaMultiselect ? semanaMultiselect.getSelected() : null;
   const setoresSel = setorMultiselect.getSelected();
   const produtosSel = produtoMultiselect ? produtoMultiselect.getSelected() : null;
 
   return DATA.registros.filter(r => {
-    if (!ignorarMes && (r.ano !== ano || r.mes_num !== mesNum)) return false;
+    if (!anosSel.has(String(r.ano))) return false;
+    if (!ignorarMes && mesesSel && !mesesSel.has(`${r.ano}|${r.mes_num}`)) return false;
     if (!ignorarSemana && semanasSel && !semanasSel.has(r.semana)) return false;
     if (!setoresSel.has(r.setor)) return false;
     if (produtosSel && !produtosSel.has(r.produto)) return false;
@@ -480,18 +512,20 @@ function renderGeral(regsMes) {
   document.getElementById('tabelaSetor').innerHTML = setores.length ? tabela : '<div class="empty">Nenhum dado para o filtro selecionado.</div>';
   registrarOrdenacao('tabelaSetor', renderTudo);
 
-  // Evolução mensal — todos os meses do ano corrente, respeitando Setor/Produto (ignora Mês/Semana)
-  const [anoAtual] = mesSelect.value.split('|').map(Number);
-  const regsAno = registrosFiltrados({ ignorarMes: true, ignorarSemana: true }).filter(r => r.ano === anoAtual);
-  const meses = DATA.filtros.meses.filter(m => m.ano === anoAtual);
-  const porMes = meses.map(m => calcularIndicadores(regsAno.filter(r => r.mes_num === m.mes_num)));
+  // Evolução mensal — todos os meses dos anos selecionados, respeitando
+  // Setor/Produto (ignora os filtros de Mês/Semana).
+  const regsAnos = registrosFiltrados({ ignorarMes: true, ignorarSemana: true });
+  const anosSel = anoMultiselect.getSelected();
+  const meses = DATA.filtros.meses.filter(m => anosSel.has(String(m.ano)));
+  const porMes = meses.map(m => calcularIndicadores(regsAnos.filter(r => r.ano === m.ano && r.mes_num === m.mes_num)));
+  const rotulosMes = meses.map(m => anosSel.size > 1 ? `${m.mes}/${m.ano}` : m.mes);
 
   const traces = [
     { name: 'Demandado × Produzido', y: porMes.map(i => i.demXProd), color: resolveVar('--series-1') },
     { name: 'Demandado × Programado', y: porMes.map(i => i.demXProg), color: resolveVar('--series-2') },
     { name: 'Programado × Produzido', y: porMes.map(i => i.progXProd), color: resolveVar('--series-3') },
   ].map(t => ({
-    x: meses.map(m => m.mes), y: t.y, name: t.name, type: 'bar',
+    x: rotulosMes, y: t.y, name: t.name, type: 'bar',
     marker: { color: t.color },
     text: t.y.map(fmtPct), textposition: 'outside',
     hovertemplate: '%{x}<br>%{y:.2f}%<extra></extra>',
@@ -509,19 +543,34 @@ function renderSemanal(regsMes) {
   const ind = calcularIndicadores(regsMes);
   document.getElementById('statRowSemanal').innerHTML = statTiles(ind);
 
-  const [ano, mesNum] = mesSelect.value.split('|').map(Number);
-  const nomeMes = (DATA.filtros.meses.find(m => m.ano === ano && m.mes_num === mesNum) || {}).mes || '';
-  document.getElementById('tituloSemanal').textContent = `Comparativo semanal de aderência — ${nomeMes}/${ano}`;
+  const mesesSel = mesesSelecionadosOrdenados();
+  if (mesesSel.length === 1) {
+    const [ano, mesNum] = mesesSel[0];
+    const nomeMes = (DATA.filtros.meses.find(m => m.ano === ano && m.mes_num === mesNum) || {}).mes || '';
+    document.getElementById('tituloSemanal').textContent = `Comparativo semanal de aderência — ${nomeMes}/${ano}`;
+  } else {
+    document.getElementById('tituloSemanal').textContent =
+      `Comparativo semanal de aderência — ${mesesSel.length} meses selecionados`;
+  }
 
-  const semanas = semanasDoMes(ano, mesNum);
-  const porSemana = semanas.map(s => calcularIndicadores(regsMes.filter(r => r.semana === s)));
+  const semanasInfo = [];
+  mesesSel.forEach(([ano, mesNum]) => {
+    const nomeMes = (DATA.filtros.meses.find(m => m.ano === ano && m.mes_num === mesNum) || {}).mes || '';
+    semanasDoMes(ano, mesNum).forEach(s => semanasInfo.push({
+      semana: s, ano, mesNum,
+      label: mesesSel.length > 1 ? `${s} (${nomeMes}/${ano})` : s,
+    }));
+  });
+  const porSemana = semanasInfo.map(si =>
+    calcularIndicadores(regsMes.filter(r => r.semana === si.semana && r.ano === si.ano && r.mes_num === si.mesNum))
+  );
 
   const traces = [
     { name: 'Demandado × Produzido', y: porSemana.map(i => i.demXProd), color: resolveVar('--series-1') },
     { name: 'Demandado × Programado', y: porSemana.map(i => i.demXProg), color: resolveVar('--series-2') },
     { name: 'Programado × Produzido', y: porSemana.map(i => i.progXProd), color: resolveVar('--series-3') },
   ].map(t => ({
-    x: semanas, y: t.y, name: t.name, type: 'bar',
+    x: semanasInfo.map(si => si.label), y: t.y, name: t.name, type: 'bar',
     marker: { color: t.color },
     text: t.y.map(fmtPct), textposition: 'outside',
     hovertemplate: '%{x}<br>%{y:.2f}%<extra></extra>',
@@ -529,7 +578,7 @@ function renderSemanal(regsMes) {
   const layout = baseLayout();
   layout.barmode = 'group';
   layout.yaxis.range = [0, 115];
-  Plotly.newPlot('chartSemanal', semanas.length ? traces : [], layout, { displayModeBar: false, responsive: true });
+  Plotly.newPlot('chartSemanal', semanasInfo.length ? traces : [], layout, { displayModeBar: false, responsive: true });
 }
 
 // ---------------------------------------------------------------
