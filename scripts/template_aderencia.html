@@ -34,6 +34,8 @@
   }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 20px 64px; }
   header.top { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+  header.top .title-group { display: flex; align-items: center; gap: 12px; }
+  header.top img.logo { width: 42px; height: 42px; border-radius: 8px; flex-shrink: 0; }
   h1 { font-size: 20px; margin: 0; color: var(--brand); font-weight: 600; }
   .subtitle { color: var(--text-secondary); font-size: 12px; }
   a.voltar { display: inline-block; font-size: 12px; color: var(--brand); text-decoration: none; font-weight: 600; margin-bottom: 14px; }
@@ -113,9 +115,12 @@
 <div class="viz-root wrap">
   <a class="voltar" href="../">← Voltar ao início</a>
   <header class="top">
-    <div>
-      <h1>Aderência de Produção</h1>
-      <div class="subtitle" id="geradoEm"></div>
+    <div class="title-group">
+      <img class="logo" src="../assets/logo-vicosa.png" alt="Produtos Viçosa">
+      <div>
+        <h1>Aderência de Produção</h1>
+        <div class="subtitle" id="geradoEm"></div>
+      </div>
     </div>
   </header>
 
