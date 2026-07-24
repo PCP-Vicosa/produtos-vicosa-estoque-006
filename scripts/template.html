@@ -860,7 +860,7 @@ function renderLotes() {
     naoVencidos.sort((a, b) => (a.dias_real ?? 9999) - (b.dias_real ?? 9999)), true, 'tabelaTodos'
   );
   document.getElementById('tabelaAtencao').innerHTML = montarTabela(atencao, true, 'tabelaAtencao');
-  document.getElementById('tabelaVencidos').innerHTML = montarTabela(vencidos, true, 'tabelaVencidos');
+  document.getElementById('tabelaVencidos').innerHTML = montarTabela(vencidos, false, 'tabelaVencidos');
   registrarOrdenacao('tabelaTodos', renderLotes);
   registrarOrdenacao('tabelaAtencao', renderLotes);
   registrarOrdenacao('tabelaVencidos', renderLotes);
