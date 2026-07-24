@@ -1,39 +1,61 @@
-# Dashboard de Estoque — Depósito 006
+# Viçosa BI — Painel de Indicadores
 
-Dashboard estático (HTML) para acompanhamento diário do estoque do Depósito 006,
-gerado a partir da planilha `BD_006.xlsx`. Complementa o BI em Power BI já em
-construção, servindo como versão web para apresentação de resultados, publicável
-gratuitamente pelo GitHub Pages.
+Portal com os painéis de BI da Viçosa, publicado gratuitamente pelo GitHub
+Pages. Hoje tem um painel funcionando (Estoque 006) e um espaço reservado
+para o próximo (Aderência).
 
-## O que ele mostra
+## Estrutura do portal
 
-- Filtro por **Família** (que já refina a lista de **Produto**, efeito cascata) e por **Período**.
-- Cartões com saldo atual, saldo do dia anterior e variação.
-- Gráfico de evolução do saldo dia a dia para o produto selecionado.
-- Tabela de lotes em estoque na última leitura, com lote, data de fabricação,
-  data de validade e um selo de status (dias até vencer: verde ≥ 21 dias,
-  amarelo entre 8 e 20, vermelho ≤ 7 dias ou vencido).
+```
+docs/
+├── index.html            <- página inicial (portal), com os botões dos painéis
+├── estoque-006/
+│   ├── index.html         <- dashboard de Estoque 006 (gerado pelo script)
+│   └── vendor/plotly.min.js
+└── aderencia/
+    └── index.html         <- placeholder "em construção" até os dados chegarem
+```
 
-## Estrutura do projeto
+Cada painel novo ganha sua própria subpasta dentro de `docs/`, e um novo
+card é adicionado na página inicial (`docs/index.html`) apontando para ela.
+
+## Painel: Estoque 006
+
+Dashboard para acompanhamento diário do estoque do Depósito 006, gerado a
+partir da planilha `BD_006.xlsx`. Complementa o BI em Power BI, servindo
+como versão web para apresentação de resultados.
+
+### O que ele mostra
+
+- 3 páginas: **Visão Geral** (saldo total, variação, saldo por setor),
+  **Família/SKU** (evolução por setor + gráfico cascata por SKU) e
+  **Lotes e Validade** (tabelas de lotes com alerta de vencimento).
+- Filtros por **Setor** e **Produto** com múltipla seleção (checkboxes).
+- "Dias até vencer" calculado com base na data real de hoje (a data do
+  dispositivo de quem está vendo a página), não na data da última leitura.
+
+### Estrutura
 
 ```
 dashboard-estoque-006/
 ├── data/
-│   └── BD_006.xlsx          <- base de dados (substitua por uma versão mais nova quando atualizar)
+│   ├── BD_006.xlsx                  <- base de dados (histórico empilhado dia a dia)
+│   ├── Dim_Peso_Produto.csv         <- peso (kg) por unidade de cada produto
+│   ├── Dim_Nome_Curto_Produto.csv   <- nome comercial curto de cada produto
+│   └── Tema.json                    <- tema de cores exportado do Power BI
 ├── scripts/
-│   ├── build_dashboard.py   <- lê o xlsx e gera o HTML
-│   └── template.html        <- layout/estilo/gráfico (Plotly), com um marcador __DASHBOARD_DATA__
+│   ├── build_dashboard.py   <- lê os dados e gera docs/estoque-006/index.html
+│   └── template.html        <- layout/estilo/gráficos (Plotly), com marcador __DASHBOARD_DATA__
 ├── docs/
-│   ├── index.html           <- dashboard gerado (é o que o GitHub Pages publica)
-│   └── vendor/plotly.min.js <- biblioteca de gráficos, embutida localmente (não depende de internet)
 ├── requirements.txt
 └── README.md
 ```
 
-## Como atualizar o dashboard (rotina do dia a dia)
+### Como atualizar o dashboard (rotina do dia a dia)
 
-1. Substitua o arquivo `data/BD_006.xlsx` pela versão mais recente da base
-   (a mesma planilha que você já usa/atualiza para o Power BI).
+1. Empilhe a leitura do dia na base `data/BD_006.xlsx` (nova(s) linha(s)
+   com a coluna `Data Estoque` = data de hoje, mesmas colunas do restante
+   da planilha). É este arquivo, já com o histórico completo, que o script lê.
 2. Rode o script:
 
    ```bash
@@ -41,11 +63,11 @@ dashboard-estoque-006/
    python scripts/build_dashboard.py
    ```
 
-3. Isso regenera `docs/index.html` com os dados novos.
+3. Isso regenera `docs/estoque-006/index.html` com os dados novos.
 4. Suba a alteração para o GitHub:
 
    ```bash
-   git add data/BD_006.xlsx docs/index.html
+   git add data/BD_006.xlsx docs/estoque-006/index.html
    git commit -m "Atualiza dados do estoque"
    git push
    ```
@@ -55,18 +77,20 @@ dashboard-estoque-006/
 
 ## Como publicar no GitHub Pages (fazer uma vez só)
 
-1. Crie um repositório no GitHub (ex: `dashboard-estoque-006`) e suba este
-   projeto (`git init`, `git remote add origin ...`, `git push`).
+1. Crie um repositório no GitHub e suba este projeto (`git init`,
+   `git remote add origin ...`, `git push`).
 2. No GitHub, vá em **Settings > Pages**.
 3. Em **Source**, selecione a branch `main` e a pasta `/docs`.
-4. Salve. Em alguns minutos o link do dashboard aparece na própria página
-   (formato `https://SEU-USUARIO.github.io/dashboard-estoque-006/`).
+4. Salve. Em alguns minutos o portal aparece em
+   `https://SEU-USUARIO.github.io/NOME-DO-REPOSITORIO/`.
 
 ## Abrindo localmente (sem GitHub)
 
-Também é possível abrir o arquivo `docs/index.html` direto no navegador
-(duplo clique) sem precisar de internet ou servidor — os gráficos funcionam
-porque a biblioteca Plotly está embutida em `docs/vendor/`.
+Dá pra abrir `docs/index.html` direto no navegador, mas como é um arquivo
+local (protocolo `file://`), os links entre pastas (`./estoque-006/`) não
+abrem `index.html` automaticamente — funciona certinho só quando publicado
+no GitHub Pages (ou rodando um servidor local, ex: `python -m http.server`
+dentro da pasta `docs/`).
 
 ## Observação sobre a planilha
 

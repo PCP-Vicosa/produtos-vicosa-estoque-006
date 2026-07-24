@@ -30,7 +30,7 @@ DATA_DIR = BASE_DIR / "data"
 BD_PATH = DATA_DIR / "BD_006.xlsx"
 PESO_PATH = DATA_DIR / "Dim_Peso_Produto.csv"
 NOME_PATH = DATA_DIR / "Dim_Nome_Curto_Produto.csv"
-OUTPUT_PATH = BASE_DIR / "docs" / "index.html"
+OUTPUT_PATH = BASE_DIR / "docs" / "estoque-006" / "index.html"
 TEMPLATE_PATH = BASE_DIR / "scripts" / "template.html"
 
 # Código da Família (coluna "Família" do BD_006) -> nome do Setor.

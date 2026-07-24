@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aderência — Em construção</title>
+<style>
+  :root {
+    --brand: #1B5E3A;
+    --page-plane: #F7F5F0;
+    --surface-1: #FFFFFF;
+    --text-primary: #2D2D2D;
+    --text-secondary: #52514e;
+    --border: #E0E0E0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+  }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 48px 40px;
+    max-width: 420px;
+  }
+  h1 { font-size: 20px; color: var(--brand); margin: 0 0 10px; }
+  p { color: var(--text-secondary); font-size: 14px; margin: 0; }
+  a.voltar {
+    display: inline-block;
+    margin-top: 24px;
+    font-size: 13px;
+    color: var(--brand);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  a.voltar:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Painel de Aderência</h1>
+    <p>Este painel ainda está em construção. Assim que os dados forem carregados, ele aparece aqui.</p>
+    <a class="voltar" href="../">← Voltar ao início</a>
+  </div>
+</body>
+</html>
