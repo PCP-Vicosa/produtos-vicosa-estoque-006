@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Viçosa BI — Painel de Indicadores</title>
-<meta http-equiv="refresh" content="0; url=./estoque-006/">
 <style>
   :root {
     color-scheme: light;
@@ -17,104 +16,81 @@
     --border:         #E0E0E0;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    min-height: 100vh;
-    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-    background: var(--page-plane);
-    color: var(--text-primary);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 60px 20px;
-  }
-  header { display: flex; align-items: center; gap: 16px; margin-bottom: 44px; width: 100%; max-width: 620px; }
-  header img.logo { width: 56px; height: 56px; border-radius: 10px; flex-shrink: 0; }
-  header .header-text { text-align: left; }
-  h1 { font-size: 26px; color: var(--brand); font-weight: 600; margin: 0 0 4px; }
-  p.subtitle { color: var(--text-secondary); font-size: 14px; margin: 0; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--page-plane); color: var(--text-primary); }
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
-    max-width: 620px;
-    width: 100%;
+  .app-shell { display: flex; align-items: stretch; min-height: 100vh; }
+  .sidebar {
+    width: 250px; flex-shrink: 0; background: var(--brand); color: #fff;
+    padding: 26px 18px; box-sizing: border-box;
   }
-  a.card {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 20px;
-    background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 28px 24px;
-    text-decoration: none;
-    color: inherit;
-    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
-    min-height: 150px;
+  .sidebar .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .sidebar .logo-row img { width: 52px; height: 52px; border-radius: 10px; flex-shrink: 0; }
+  .sidebar .logo-row h2 { font-size: 16px; margin: 0; font-weight: 700; line-height: 1.25; color: #fff; }
+  .sidebar .sb-subtitle { font-size: 11.5px; color: rgba(255,255,255,0.72); margin: 4px 0 22px; }
+  .sidebar a.sb-card {
+    display: flex; align-items: flex-start; gap: 10px; text-decoration: none; color: #fff;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px; padding: 12px; margin-bottom: 10px; transition: background .12s ease;
   }
-  a.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(27,94,58,0.12);
-    border-color: var(--brand);
+  .sidebar a.sb-card:hover { background: rgba(255,255,255,0.16); }
+  .sidebar a.sb-card.active { background: #fff; color: var(--brand); border-color: #fff; }
+  .sidebar .sb-icon {
+    width: 30px; height: 30px; border-radius: 7px; background: rgba(255,255,255,0.18);
+    display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
   }
-  a.card.disabled {
-    opacity: 0.55;
-    cursor: default;
-    pointer-events: none;
-  }
-  .card-icon {
-    width: 40px; height: 40px;
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--brand) 12%, transparent);
-    color: var(--brand);
+  .sidebar a.sb-card.active .sb-icon { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand); }
+  .sidebar .sb-card-title { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
+  .sidebar .sb-card-desc { font-size: 11px; color: rgba(255,255,255,0.75); margin: 0; line-height: 1.35; }
+  .sidebar a.sb-card.active .sb-card-desc { color: var(--text-secondary); }
+
+  .main-content {
+    flex: 1; min-width: 0;
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px; font-weight: 700;
+    padding: 40px;
   }
-  .card-title { font-size: 17px; font-weight: 600; color: var(--text-primary); }
-  .card-desc { font-size: 13px; color: var(--text-secondary); }
-  .badge-em-breve {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    background: color-mix(in srgb, var(--text-muted) 15%, transparent);
-    border-radius: 999px;
-    padding: 3px 9px;
-    align-self: flex-start;
+  .welcome { max-width: 380px; text-align: center; }
+  .welcome .welcome-icon {
+    width: 56px; height: 56px; border-radius: 14px; margin: 0 auto 18px;
+    background: color-mix(in srgb, var(--brand) 12%, transparent); color: var(--brand);
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
   }
-  footer { margin-top: 48px; color: var(--text-muted); font-size: 12px; }
+  .welcome h1 { font-size: 19px; color: var(--brand); font-weight: 700; margin: 0 0 10px; }
+  .welcome p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+  .welcome .arrow-hint { color: var(--text-muted); font-size: 12px; margin-top: 18px; }
 </style>
 </head>
 <body>
-  <header>
-    <img class="logo" src="./assets/logo-vicosa.png" alt="Produtos Viçosa">
-    <div class="header-text">
-      <h1>Viçosa BI — Painel de Indicadores</h1>
-      <p class="subtitle">Selecione um painel para acompanhar</p>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="logo-row">
+      <img src="./assets/logo-vicosa.png" alt="Produtos Viçosa">
+      <h2>Viçosa BI</h2>
     </div>
-  </header>
-
-  <div class="grid">
-    <a class="card" href="./estoque-006/">
-      <div class="card-icon">E6</div>
+    <div class="sb-subtitle">Selecione um painel para acompanhar</div>
+    <a class="sb-card" href="./estoque-006/">
+      <div class="sb-icon">E6</div>
       <div>
-        <div class="card-title">Estoque 006</div>
-        <div class="card-desc">Saldo, lotes e validade do Depósito 006 — visão geral, família/SKU e controle de vencimento.</div>
+        <p class="sb-card-title">Estoque 006</p>
+        <p class="sb-card-desc">Saldo, lotes e validade do Depósito 006.</p>
       </div>
     </a>
-
-    <a class="card" href="./aderencia/">
-      <div class="card-icon">AD</div>
+    <a class="sb-card" href="./aderencia/">
+      <div class="sb-icon">AD</div>
       <div>
-        <div class="card-title">Aderência</div>
-        <div class="card-desc">Aderência de produção — demandado x programado x produzido, por setor, semana e produto.</div>
+        <p class="sb-card-title">Aderência</p>
+        <p class="sb-card-desc">Demandado x programado x produzido.</p>
       </div>
     </a>
+  </aside>
+  <div class="main-content">
+    <div class="welcome">
+      <div class="welcome-icon">&#128200;</div>
+      <h1>Nenhum painel selecionado</h1>
+      <p>Use os botões <strong>Estoque 006</strong> e <strong>Aderência</strong>, na barra lateral à esquerda, para escolher o painel que você quer acompanhar.</p>
+      <div class="arrow-hint">&#8592; Escolha um painel ao lado</div>
+    </div>
   </div>
-
-  <footer>Viçosa — Painéis de Business Intelligence</footer>
+</div>
 </body>
 </html>
