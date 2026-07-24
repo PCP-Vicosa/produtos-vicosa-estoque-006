@@ -6,7 +6,7 @@
 <title>Aderência de Produção</title>
 <script src="./vendor/plotly.min.js"></script>
 <style>
-  .viz-root {
+  :root, .viz-root {
     color-scheme: light;
     --brand:          #1B5E3A;
     --surface-1:      #FFFFFF;
@@ -109,14 +109,63 @@
   .chart-tall { width: 100%; height: 380px; }
   .page { display: none; }
   .page.active { display: block; }
+
+  .app-shell { display: flex; align-items: stretch; min-height: 100vh; }
+  .sidebar {
+    width: 250px; flex-shrink: 0; background: var(--brand); color: #fff;
+    padding: 26px 18px; box-sizing: border-box;
+  }
+  .sidebar .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .sidebar .logo-row img { width: 34px; height: 34px; border-radius: 7px; flex-shrink: 0; }
+  .sidebar .logo-row h2 { font-size: 15px; margin: 0; font-weight: 700; line-height: 1.25; }
+  .sidebar .sb-subtitle { font-size: 11.5px; color: rgba(255,255,255,0.72); margin: 4px 0 22px; }
+  .sidebar a.sb-card {
+    display: flex; align-items: flex-start; gap: 10px; text-decoration: none; color: #fff;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px; padding: 12px; margin-bottom: 10px; transition: background .12s ease;
+  }
+  .sidebar a.sb-card:hover { background: rgba(255,255,255,0.16); }
+  .sidebar a.sb-card.active { background: #fff; color: var(--brand); border-color: #fff; }
+  .sidebar .sb-icon {
+    width: 30px; height: 30px; border-radius: 7px; background: rgba(255,255,255,0.18);
+    display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .sidebar a.sb-card.active .sb-icon { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand); }
+  .sidebar .sb-card-title { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
+  .sidebar .sb-card-desc { font-size: 11px; color: rgba(255,255,255,0.75); margin: 0; line-height: 1.35; }
+  .sidebar a.sb-card.active .sb-card-desc { color: var(--text-secondary); }
+  .main-content { flex: 1; min-width: 0; }
+  .main-content .wrap { max-width: none; }
 </style>
 </head>
 <body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="logo-row">
+      <img src="../assets/logo-vicosa.png" alt="Produtos Viçosa">
+      <h2>Viçosa BI</h2>
+    </div>
+    <div class="sb-subtitle">Selecione um painel para acompanhar</div>
+    <a class="sb-card" href="../estoque-006/">
+      <div class="sb-icon">E6</div>
+      <div>
+        <p class="sb-card-title">Estoque 006</p>
+        <p class="sb-card-desc">Saldo, lotes e validade do Depósito 006.</p>
+      </div>
+    </a>
+    <a class="sb-card active" href="../aderencia/">
+      <div class="sb-icon">AD</div>
+      <div>
+        <p class="sb-card-title">Aderência</p>
+        <p class="sb-card-desc">Demandado x programado x produzido.</p>
+      </div>
+    </a>
+  </aside>
+  <div class="main-content">
 <div class="viz-root wrap">
-  <a class="voltar" href="../">← Voltar ao início</a>
   <header class="top">
     <div class="title-group">
-      <img class="logo" src="../assets/logo-vicosa.png" alt="Produtos Viçosa">
       <div>
         <h1>Aderência de Produção</h1>
         <div class="subtitle" id="geradoEm"></div>
@@ -192,6 +241,8 @@
   </section>
 
   <div class="footer-note">Fonte: Producao_Semanal_PowerBI.xlsx</div>
+</div>
+  </div>
 </div>
 
 <script>
