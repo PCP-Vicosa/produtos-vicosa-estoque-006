@@ -17,7 +17,49 @@ docs/
 ```
 
 Cada painel novo ganha sua própria subpasta dentro de `docs/`, e um novo
-card é adicionado na página inicial (`docs/index.html`) apontando para ela.
+card é adicionado na barra lateral de navegação (visível em todos os painéis).
+
+## Envio automático para o GitHub (Git Auto Sync)
+
+Existe um script que fica rodando em segundo plano e faz sozinho o
+`git add` + `git commit` + `git push` sempre que detecta alguma mudança
+salva no projeto (depois de alguns segundos sem novas edições, pra não
+enviar no meio de uma alteração).
+
+### Opção 1 — Automático ao abrir o VSCode (recomendado)
+
+Já está configurado em `.vscode/tasks.json` para iniciar sozinho quando
+você abre a pasta do projeto no VSCode. Na primeira vez, o VSCode pode
+perguntar se você confia nas tasks automáticas da pasta — clique em
+**"Allow Automatic Tasks"** (ou "Permitir tarefas automáticas"). A partir
+daí, o terminal "Git Auto Sync" abre sozinho e fica observando o projeto.
+
+Se quiser iniciar manualmente a qualquer momento: no VSCode, vá em
+**Terminal > Run Task... > Git Auto Sync**.
+
+### Opção 2 — Clicando duas vezes no arquivo
+
+Dá pra rodar sem abrir o VSCode: clique duas vezes em
+`scripts\git_auto_sync.bat`. Uma janela preta (terminal) abre e fica
+monitorando; para parar, feche a janela ou aperte Ctrl+C.
+
+### Opção 3 — Enviar uma vez só, na hora
+
+Se preferir não deixar nada rodando e só mandar a alteração pontualmente:
+no VSCode, **Terminal > Run Task... > Git Sync Agora (uma vez)**. Ou pelo
+terminal comum:
+
+```bash
+git add .
+git commit -m "Atualização"
+git push
+```
+
+**Importante:** o Git Auto Sync só funciona se o `git push` não pedir senha
+a cada vez (ou seja, se a autenticação SSH/token já estiver configurada,
+como já foi feito neste projeto) — do contrário, o envio vai falhar
+silenciosamente esperando uma senha que nunca chega. Se isso acontecer, o
+terminal mostra a mensagem de erro do `git push` para te avisar.
 
 ## Painel: Estoque 006
 

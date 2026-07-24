@@ -1,0 +1,32 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Git Auto Sync",
+      "type": "shell",
+      "command": "python",
+      "args": ["scripts/auto_git_sync.py"],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": false,
+        "clear": false
+      },
+      "problemMatcher": [],
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
+    {
+      "label": "Git Sync Agora (uma vez)",
+      "type": "shell",
+      "command": "git add . && git commit -m \"Atualização manual - %date% %time%\" && git push",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
