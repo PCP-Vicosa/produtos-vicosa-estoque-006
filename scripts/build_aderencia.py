@@ -31,34 +31,83 @@ MES_ORDEM = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho"
              "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
 
 
+def _mes_num_semana(data_inicio: pd.Timestamp) -> int:
+    """Replica a fórmula da planilha para decidir a que mês uma semana
+    "pertence" quando ela cruza a virada do mês:
+    =IF(MONTH(E+1)=MONTH(E+6), MONTH(E+1),
+        IF(MIN(EOMONTH(E+1,0),E+6)-(E+1)+1>=3, MONTH(E+1), MONTH(E+6)))
+    """
+    d1 = data_inicio + pd.Timedelta(days=1)
+    d6 = data_inicio + pd.Timedelta(days=6)
+    if d1.month == d6.month:
+        return d1.month
+    fim_mes_d1 = d1 + pd.offsets.MonthEnd(0)
+    limite = min(fim_mes_d1, d6)
+    dias_no_mes_d1 = (limite - d1).days + 1
+    return d1.month if dias_no_mes_d1 >= 3 else d6.month
+
+
 def carregar_dados() -> pd.DataFrame:
     df = pd.read_excel(DATA_PATH, sheet_name="Dados_Consolidados", header=0)
     df = df.copy()
     df["Data Início Semana"] = pd.to_datetime(df["Data Início Semana"], errors="coerce")
-    for c in ["Programado (KG)", "Programado Ajustado (KG)", "Produzido (KG)",
-              "Produzido Ajustado (KG)", "Demanda (KG)", "Produzido (UN)"]:
-        df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
+    for c in ["Gramatura (KG)", "Programado (UN)", "Produzido (UN)", "Demanda (UN)",
+              "Programado (KG)", "Programado Ajustado (KG)", "Produzido (KG)",
+              "Produzido Ajustado (KG)", "Demanda (KG)"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    # Às vezes a planilha vem com Ano / Mês / Mês Nº vazios (colunas calculadas
-    # no Power BI que não são gravadas como valor no .xlsx). Nesses casos,
-    # recalcula a partir de "Data Início Semana", que sempre vem preenchida.
-    precisa_recalcular = (
-        df["Ano"].isna().any() or df["Mês"].isna().any() or df["Mês Nº"].isna().any()
-    )
-    if precisa_recalcular:
+    com_data = df["Data Início Semana"].notna()
+
+    # Às vezes a planilha vem com colunas calculadas do Excel/Power BI vazias
+    # (fórmula presente na célula, mas sem valor em cache — acontece quando o
+    # arquivo é salvo/gerado sem recalcular). Nesses casos, recalcula a partir
+    # das colunas "cruas" (UN, Gramatura, Data Início Semana), replicando as
+    # mesmas fórmulas da planilha original.
+    if df["Ano"].isna().any() or df["Mês"].isna().any() or df["Mês Nº"].isna().any():
         df["Ano"] = df["Ano"].astype(object)
         df["Mês"] = df["Mês"].astype(object)
         df["Mês Nº"] = df["Mês Nº"].astype(object)
-        com_data = df["Data Início Semana"].notna()
         df.loc[com_data, "Ano"] = df.loc[com_data, "Data Início Semana"].dt.year
-        mes_num_calc = df.loc[com_data, "Data Início Semana"].dt.month
+        mes_num_calc = df.loc[com_data, "Data Início Semana"].apply(_mes_num_semana)
         df.loc[com_data, "Mês Nº"] = mes_num_calc
         df.loc[com_data, "Mês"] = mes_num_calc.map(lambda n: MES_ORDEM[int(n) - 1])
-        faltando = df["Ano"].isna().sum()
-        if faltando:
-            print(f"[aviso] {faltando} linha(s) sem 'Data Início Semana' e sem Ano/Mês "
-                  f"preenchidos — serão descartadas.")
-            df = df[df["Ano"].notna()]
+
+    faltando = df["Ano"].isna().sum()
+    if faltando:
+        print(f"[aviso] {faltando} linha(s) sem 'Data Início Semana' e sem Ano/Mês "
+              f"preenchidos — serão descartadas.")
+        df = df[df["Ano"].notna()]
+
+    gram = df["Gramatura (KG)"].fillna(0)
+    prog_un = df["Programado (UN)"].fillna(0)
+    prod_un = df["Produzido (UN)"].fillna(0)
+    dem_un = df["Demanda (UN)"].fillna(0)
+
+    if df["Programado (KG)"].isna().any():
+        df["Programado (KG)"] = prog_un * gram
+    if df["Produzido (KG)"].isna().any():
+        df["Produzido (KG)"] = prod_un * gram
+    if df["Demanda (KG)"].isna().any():
+        df["Demanda (KG)"] = dem_un * gram
+
+    if df["Programado Ajustado (KG)"].isna().any():
+        prog_kg = df["Programado (KG)"]
+        dem_kg = df["Demanda (KG)"]
+        df["Programado Ajustado (KG)"] = [
+            0 if d == 0 else (d if p / d > 1 else p) for p, d in zip(prog_kg, dem_kg)
+        ]
+
+    if df["Produzido Ajustado (KG)"].isna().any():
+        prod_kg = df["Produzido (KG)"]
+        prog_ajust = df["Programado Ajustado (KG)"]
+        df["Produzido Ajustado (KG)"] = [
+            0 if pa == 0 else (pa if pr / pa > 1 else pr)
+            for pr, pa in zip(prod_kg, prog_ajust)
+        ]
+
+    for c in ["Programado (KG)", "Programado Ajustado (KG)", "Produzido (KG)",
+              "Produzido Ajustado (KG)", "Demanda (KG)", "Produzido (UN)"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
 
     return df
 
