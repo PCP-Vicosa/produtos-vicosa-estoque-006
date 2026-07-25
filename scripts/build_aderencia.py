@@ -38,6 +38,28 @@ def carregar_dados() -> pd.DataFrame:
     for c in ["Programado (KG)", "Programado Ajustado (KG)", "Produzido (KG)",
               "Produzido Ajustado (KG)", "Demanda (KG)", "Produzido (UN)"]:
         df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
+
+    # Às vezes a planilha vem com Ano / Mês / Mês Nº vazios (colunas calculadas
+    # no Power BI que não são gravadas como valor no .xlsx). Nesses casos,
+    # recalcula a partir de "Data Início Semana", que sempre vem preenchida.
+    precisa_recalcular = (
+        df["Ano"].isna().any() or df["Mês"].isna().any() or df["Mês Nº"].isna().any()
+    )
+    if precisa_recalcular:
+        df["Ano"] = df["Ano"].astype(object)
+        df["Mês"] = df["Mês"].astype(object)
+        df["Mês Nº"] = df["Mês Nº"].astype(object)
+        com_data = df["Data Início Semana"].notna()
+        df.loc[com_data, "Ano"] = df.loc[com_data, "Data Início Semana"].dt.year
+        mes_num_calc = df.loc[com_data, "Data Início Semana"].dt.month
+        df.loc[com_data, "Mês Nº"] = mes_num_calc
+        df.loc[com_data, "Mês"] = mes_num_calc.map(lambda n: MES_ORDEM[int(n) - 1])
+        faltando = df["Ano"].isna().sum()
+        if faltando:
+            print(f"[aviso] {faltando} linha(s) sem 'Data Início Semana' e sem Ano/Mês "
+                  f"preenchidos — serão descartadas.")
+            df = df[df["Ano"].notna()]
+
     return df
 
 
