@@ -120,6 +120,44 @@ def fmt_data(d):
     return pd.Timestamp(d).strftime("%d/%m/%Y") if pd.notna(d) else None
 
 
+def _mtime_local(caminho: Path) -> pd.Timestamp:
+    return (pd.Timestamp(caminho.stat().st_mtime, unit="s", tz="UTC")
+            .tz_convert("America/Sao_Paulo"))
+
+
+def data_da_extracao() -> str:
+    """Data que aparece no cabecalho como 'Atualizado em'.
+
+    O BD_022 e uma foto instantanea: nao tem coluna de data dentro dele, entao
+    a unica pista e o arquivo. Antes olhavamos so o mtime do BD_022.xlsx, o que
+    mentia quando a copia preservava o horario original (shutil.copy2) — o
+    painel dizia 25/07 depois de uma extracao feita hoje. Agora vale o mais
+    recente entre o BD_022.xlsx e a ultima extracao solta em data/extracoes/022.
+    """
+    candidatos = []
+    if BD_PATH.exists():
+        candidatos.append(("BD_022.xlsx", _mtime_local(BD_PATH)))
+
+    pasta = DATA_DIR / "extracoes" / "022"
+    if pasta.exists():
+        for f in pasta.glob("*.xls*"):
+            if not f.name.startswith("~$"):
+                candidatos.append((f.name, _mtime_local(f)))
+
+    if not candidatos:
+        return pd.Timestamp.now(tz="America/Sao_Paulo").strftime("%d/%m/%Y")
+
+    nome, ts = max(candidatos, key=lambda c: c[1])
+    hoje = pd.Timestamp.now(tz="America/Sao_Paulo").normalize()
+    dias = (hoje - ts.normalize()).days
+    print(f"Data da extracao: {ts:%d/%m/%Y %H:%M} (origem: {nome})")
+    if dias >= 1:
+        print(f"[AVISO] a extracao mais recente tem {dias} dia(s). Se voce "
+              f"exportou hoje, o arquivo novo nao chegou em data/estoque-022/ "
+              f"nem em data/extracoes/022/.")
+    return ts.strftime("%d/%m/%Y")
+
+
 def carregar_dados() -> pd.DataFrame:
     df = ler_excel_robusto(BD_PATH)
 
@@ -276,14 +314,7 @@ def main():
     if tema_path.exists():
         tema = json.loads(tema_path.read_text(encoding="utf-8-sig"))
 
-    # Data de atualização = data de modificação do arquivo BD_022.xlsx
-    # (o dia em que a leitura foi sobrescrita), não a hora em que este
-    # script rodou.
-    data_arquivo = (
-        pd.Timestamp(BD_PATH.stat().st_mtime, unit="s", tz="UTC")
-        .tz_convert("America/Sao_Paulo")
-        .strftime("%d/%m/%Y")
-    )
+    data_arquivo = data_da_extracao()
 
     df, alerta = conferir_contra_006(df, data_arquivo)
 

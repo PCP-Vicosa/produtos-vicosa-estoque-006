@@ -291,8 +291,11 @@
 const DATA = __ESTOQUE022_DATA__;
 const THEME = __THEME_DATA__;
 
+// Só a hora em que o painel foi gerado. A data do arquivo saiu do cabeçalho
+// porque vinha do carimbo de tempo do .xlsx, que mente quando a cópia preserva
+// o horário original — informação errada é pior que informação ausente.
 document.getElementById('geradoEm').textContent =
-  'Atualizado em ' + DATA.data_arquivo + ' · dados gerados em ' + DATA.gerado_em;
+  'Dados gerados em ' + DATA.gerado_em;
 
 // ---------------------------------------------------------------
 // Aviso de defasagem da base
