@@ -428,6 +428,12 @@ function formatMil(n) {
   if (n === null || n === undefined) return '-';
   return (n / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' Mil';
 }
+// Valores em KG: sempre por extenso (sem abreviar em "Mil"), com separador
+// de milhar "." e 2 casas decimais separadas por ",", ex: 36.927,20 kg.
+function formatKg(n) {
+  if (n === null || n === undefined) return '-';
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kg';
+}
 
 // ---------------------------------------------------------------
 // Tabelas com colunas clicáveis (ordenação) — clique 1x ordena
@@ -585,7 +591,7 @@ function renderGeral() {
   statRow.innerHTML = `
     <div class="stat-tile">
       <div class="label">Saldo Atual (kg)</div>
-      <div class="value">${formatMil(atual)}</div>
+      <div class="value">${formatKg(atual)}</div>
     </div>
     <div class="stat-tile">
       <div class="label">Variação % (kg)</div>
@@ -593,7 +599,7 @@ function renderGeral() {
     </div>
     <div class="stat-tile">
       <div class="label">Diferença diária (kg)</div>
-      <div class="value" style="font-size:22px">${diff !== null ? formatMil(diff) : '-'}</div>
+      <div class="value" style="font-size:22px">${diff !== null ? formatKg(diff) : '-'}</div>
     </div>`;
 
   const traceLinha = {
@@ -601,7 +607,7 @@ function renderGeral() {
     type: 'scatter', mode: 'lines+markers+text',
     line: { color: resolveVar('--brand'), width: 2 },
     marker: { size: 7, color: resolveVar('--brand') },
-    text: totalKg.map(formatMil), textposition: 'top center',
+    text: totalKg.map(formatKg), textposition: 'top center',
     textfont: { size: 10, color: resolveVar('--text-secondary') },
     hovertemplate: '%{x}<br>%{y:,.0f} kg<extra></extra>',
   };
@@ -617,7 +623,7 @@ function renderGeral() {
     y: setores.map(s => s.setor),
     type: 'bar', orientation: 'h',
     marker: { color: resolveVar('--brand') },
-    text: setores.map(s => formatMil(s.valor)),
+    text: setores.map(s => formatKg(s.valor)),
     textposition: 'outside',
     hovertemplate: '%{y}: %{x:,.0f} kg<extra></extra>',
   };
@@ -690,7 +696,7 @@ function renderFamilia() {
     type: 'scatter', mode: 'lines+markers+text',
     line: { color: resolveVar('--brand'), width: 2 },
     marker: { size: 7, color: resolveVar('--brand') },
-    text: totalPorDia.map(formatMil), textposition: 'top center',
+    text: totalPorDia.map(formatKg), textposition: 'top center',
     textfont: { size: 10, color: resolveVar('--text-secondary') },
     hovertemplate: '%{x}<br>%{y:,.0f} kg<extra></extra>',
   };
@@ -711,7 +717,7 @@ function renderFamilia() {
     x: [...skus.map(s => s.sku), 'Total'],
     y: [...skus.map(s => s.valor), total],
     measure: [...skus.map(() => 'relative'), 'total'],
-    text: [...skus.map(s => formatMil(s.valor)), formatMil(total)],
+    text: [...skus.map(s => formatKg(s.valor)), formatKg(total)],
     textposition: 'outside',
     connector: { line: { color: resolveVar('--gridline') } },
     increasing: { marker: { color: resolveVar('--brand') } },
@@ -817,7 +823,7 @@ function montarTabela(linhas, incluirPctValidade, tableId) {
             <td>${l.fabricacao || '-'}</td>
             <td>${l.validade || '-'}</td>
             <td class="num">${formatNum(l.saldo_un)}</td>
-            <td class="num">${formatNum(l.saldo_kg)}</td>
+            <td class="num">${formatKg(l.saldo_kg)}</td>
             <td class="num">${dias !== null ? (dias < 0 ? 'Vencido' : dias) : '-'}</td>
             ${incluirPctValidade ? `<td class="num">${pct !== null ? pct.toFixed(2) + '%' : '-'}</td>` : ''}
             <td>${badgeValidade(pct, dias)}</td>
@@ -851,7 +857,7 @@ function renderLotes() {
     </div>
     <div class="stat-tile">
       <div class="label">Saldo Atual (kg)</div>
-      <div class="value">${formatMil(saldoKgTotal)}</div>
+      <div class="value">${formatKg(saldoKgTotal)}</div>
     </div>
     <div class="stat-tile">
       <div class="label">Lotes em Atenção</div>
