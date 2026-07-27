@@ -1,0 +1,3 @@
+Coloque aqui as extracoes diarias do Deposito 006 (um arquivo por dia).
+O nome do arquivo nao importa; a data usada e a da coluna "Data Estoque".
+Depois rode: python scripts/consolidar_extracoes.py

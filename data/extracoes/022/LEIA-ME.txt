@@ -1,0 +1,3 @@
+Coloque aqui a extracao do dia do Deposito 022.
+Exporte no mesmo dia: a data usada e a de modificacao do arquivo.
+Depois rode: python scripts/consolidar_extracoes.py

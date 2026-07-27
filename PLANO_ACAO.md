@@ -168,3 +168,52 @@ E publicar o que foi feito hoje, no VS Code:
 ```
 git add . && git commit -m "fase 1: validacoes, build unico, correcao 022 e limpeza" && git push
 ```
+
+---
+
+## Registro de execução — 27/07/2026 (sessão 2)
+
+### Fase 2 — parcialmente concluída
+
+**2.1 Tabela de-para — CONCLUÍDO.** `data/Dim_DePara_Produto.csv` criado com os 49
+nomes de produto da aderência. 46 mapeados para o código SAP; 3 ficaram sem código por
+não existirem no cadastro de estoque (`IOGURTE VIÇOSA MORANGO LIGHT 800g`,
+`QUEIJO MINAS MEIA CURA (INTEIRO)`, `QUEIJO MINAS PADRÃO (MEIA LUA)`) — basta preencher
+a segunda coluna se eles tiverem código. Os 44 SKUs do estoque estão cobertos.
+A função `validar_de_para` foi adicionada ao `validacoes.py`: acusa ERRO se um produto
+novo entrar na aderência sem linha no de-para, ou se um código apontado não existir na
+dimensão de produto.
+
+**2.2 e 2.3 Extrações diárias — CONCLUÍDO.** Criadas as pastas `data/extracoes/006/` e
+`data/extracoes/022/`. O novo `scripts/consolidar_extracoes.py` empilha o BD_006 a
+partir da pasta (data vinda da coluna `Data Estoque`, mais recente vence em caso de
+duplicidade, backup `.bak` do anterior, aviso dos dias úteis faltantes) e arquiva o
+BD_022 em `data/estoque-022/historico/BD_022_AAAA-MM-DD.xlsx`.
+Rotina nova: largar os arquivos nas pastas, rodar `consolidar_extracoes.py` e depois
+`build_all.py`. O `BD_006.xlsx` e o `BD_022.xlsx` passam a ser gerados, não editados.
+
+**2.4 Código compartilhado — PENDENTE.** `vicosa-ui.js` e `comum.py` não foram feitos.
+
+### Fase 3 — iniciada pelo painel 006
+
+**3.1 Cobertura em dias — CONCLUÍDO.** Card com a mediana e gráfico dos 12 SKUs de menor
+cobertura, vermelho abaixo de 2 dias e laranja abaixo de 5. Metodologia fixada no
+docstring de `montar_cobertura` e repetida em nota sob o gráfico. Hoje: mediana 13,2
+dias, 5 SKUs abaixo de 2 dias, 8 acima de 30, 1 SKU sem saída observada fora do cálculo.
+
+**3.2 Faixa etária de validade — CONCLUÍDO.** Cinco faixas de vida útil já consumida
+(0-25, 25-50, 50-75, 75-100, vencido) com cores e quilos por faixa. Convenção
+padronizada em "consumida". Hoje: 111 / 35 / 18 / 5 / 1 lotes; 1.654,40 kg vencendo em
+7 dias e 5.457,93 kg em 30.
+
+**3.3 Saldo livre versus reservado — CONCLUÍDO.** Hoje 170.300,23 kg livres e 809,10 kg
+reservados em 31 lotes.
+
+**Pendentes da Fase 3:** 3.4 tempo de liberação da qualidade (aguarda o histórico do 022
+acumular), 3.5 série histórica e ranking de ofensores na Aderência, 3.6 página inicial
+com resumo executivo, 3.7 exportação para CSV e cabeçalho de estado.
+
+### Próximo passo ao retomar
+
+Concluir 2.4 (extrair `vicosa-ui.js` e `comum.py`) antes de mexer nos outros dois
+painéis, para não voltar a aplicar a mesma correção três vezes. Depois 3.5, 3.6 e 3.7.

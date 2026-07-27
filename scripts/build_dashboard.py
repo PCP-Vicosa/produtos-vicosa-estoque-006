@@ -217,6 +217,138 @@ def montar_lotes_por_data(df: pd.DataFrame) -> dict:
     return resultado
 
 
+def montar_cobertura(df: pd.DataFrame) -> dict:
+    """Consumo diario e cobertura em dias, por SKU.
+
+    METODOLOGIA (fixada aqui de proposito — o resultado muda bastante
+    conforme a escolha, entao ela precisa estar escrita no codigo):
+
+      consumo total do SKU = soma de todas as REDUCOES de saldo, lote a lote,
+                             entre snapshots consecutivos, ao longo de todo o
+                             periodo disponivel. Aumentos (producao nova
+                             entrando) nao entram na conta.
+      consumo diario       = consumo total / dias corridos entre o primeiro e
+                             o ultimo snapshot.
+      cobertura em dias    = saldo atual / consumo diario.
+
+    Um SKU sem nenhuma reducao observada fica sem cobertura (None), e nao
+    com cobertura infinita — sao coisas diferentes e a interface precisa
+    distinguir.
+    """
+    datas = sorted(df["Data Estoque"].dropna().unique())
+    if len(datas) < 2:
+        return {"dias_serie": 0, "por_sku": {}, "mediana": None}
+
+    dias_serie = (pd.Timestamp(datas[-1]) - pd.Timestamp(datas[0])).days or 1
+
+    # saldo em kg por (data, sku, lote)
+    chave = ["Data Estoque", "Produto Cod", "Lote Fab."]
+    saldo = df.groupby(chave)["Saldo KG"].sum()
+
+    consumo = {}
+    for i in range(1, len(datas)):
+        ant = saldo.loc[datas[i - 1]] if datas[i - 1] in saldo.index.get_level_values(0) else None
+        atu = saldo.loc[datas[i]] if datas[i] in saldo.index.get_level_values(0) else None
+        if ant is None or atu is None:
+            continue
+        delta = ant.subtract(atu, fill_value=0.0)   # positivo = saiu
+        delta = delta[delta > 0]
+        for (sku, _lote), v in delta.items():
+            consumo[sku] = consumo.get(sku, 0.0) + float(v)
+
+    ultima = datas[-1]
+    atual = (df[df["Data Estoque"] == ultima]
+             .groupby("Produto Cod")
+             .agg(kg=("Saldo KG", "sum"), nome=("Nome Curto", "first"),
+                  setor=("Setor", "first")))
+
+    por_sku, coberturas = {}, []
+    for sku, row in atual.iterrows():
+        total = consumo.get(sku, 0.0)
+        diario = total / dias_serie if total > 0 else 0.0
+        cob = round(float(row["kg"]) / diario, 1) if diario > 0 else None
+        por_sku[sku] = {
+            "nome": row["nome"], "setor": row["setor"],
+            "saldo_kg": round(float(row["kg"]), 2),
+            "consumo_dia_kg": round(diario, 2),
+            "cobertura_dias": cob,
+        }
+        if cob is not None:
+            coberturas.append(cob)
+
+    coberturas.sort()
+    mediana = None
+    if coberturas:
+        m = len(coberturas) // 2
+        mediana = (coberturas[m] if len(coberturas) % 2
+                   else round((coberturas[m - 1] + coberturas[m]) / 2, 1))
+
+    return {
+        "dias_serie": dias_serie,
+        "mediana": mediana,
+        "sem_consumo": int(sum(1 for v in por_sku.values() if v["cobertura_dias"] is None)),
+        "criticos": int(sum(1 for c in coberturas if c < 2)),
+        "excesso": int(sum(1 for c in coberturas if c > 30)),
+        "por_sku": por_sku,
+    }
+
+
+FAIXAS = [
+    ("0-25%", 0, 25), ("25-50%", 25, 50), ("50-75%", 50, 75),
+    ("75-100%", 75, 100),
+]
+
+
+def montar_faixas_validade(df: pd.DataFrame) -> dict:
+    """Distribuicao dos lotes por percentual de VIDA UTIL JA CONSUMIDA.
+
+    A convencao e sempre 'consumida', nunca 'restante' — a inversao das duas
+    leituras era uma fonte de confusao na interface. 0-25% = lote novo.
+    """
+    ultima = df["Data Estoque"].max()
+    g = df[(df["Data Estoque"] == ultima) & (df["Saldo Lote"] > 0)].copy()
+
+    vida = (g["Data Validade"] - g["Data Fab. Lote"]).dt.days
+    idade = (ultima - g["Data Fab. Lote"]).dt.days
+    g["pct_consumido"] = (100 * idade / vida).where(vida > 0)
+    g["vencido"] = g["Data Validade"] < ultima
+
+    faixas = []
+    for rotulo, ini, fim in FAIXAS:
+        m = (~g["vencido"]) & (g["pct_consumido"] >= ini) & (g["pct_consumido"] < fim)
+        faixas.append({"faixa": rotulo, "lotes": int(m.sum()),
+                       "kg": round(float(g.loc[m, "Saldo KG"].sum()), 2)})
+    m = g["vencido"]
+    faixas.append({"faixa": "Vencido", "lotes": int(m.sum()),
+                   "kg": round(float(g.loc[m, "Saldo KG"].sum()), 2)})
+
+    dias_venc = (g["Data Validade"] - ultima).dt.days
+    return {
+        "data": fmt_data(ultima),
+        "faixas": faixas,
+        "kg_7dias": round(float(g.loc[(dias_venc >= 0) & (dias_venc <= 7), "Saldo KG"].sum()), 2),
+        "kg_30dias": round(float(g.loc[(dias_venc >= 0) & (dias_venc <= 30), "Saldo KG"].sum()), 2),
+    }
+
+
+def montar_reservado(df: pd.DataFrame) -> dict:
+    """Separa o que esta em estoque do que ja esta comprometido."""
+    ultima = df["Data Estoque"].max()
+    g = df[df["Data Estoque"] == ultima]
+    if "Qtd. Reservada" not in g.columns:
+        return {"disponivel": False}
+    res_un = pd.to_numeric(g["Qtd. Reservada"], errors="coerce").fillna(0)
+    gram = g["Saldo KG"] / g["Saldo Lote"].replace(0, pd.NA)
+    res_kg = float((res_un * gram.fillna(0)).sum())
+    total_kg = float(g["Saldo KG"].sum())
+    return {
+        "disponivel": True,
+        "reservado_kg": round(res_kg, 2),
+        "livre_kg": round(total_kg - res_kg, 2),
+        "lotes_com_reserva": int((res_un > 0).sum()),
+    }
+
+
 def gerar_html(payload: dict, tema: dict | None) -> str:
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
     dados_json = json.dumps(payload, ensure_ascii=False)
@@ -247,6 +379,9 @@ def main():
         "evolucao_geral": montar_evolucao_geral(df),
         "evolucao_sku": montar_evolucao_sku(df),
         "lotes_por_data": montar_lotes_por_data(df),
+        "cobertura": montar_cobertura(df),
+        "faixas_validade": montar_faixas_validade(df),
+        "reservado": montar_reservado(df),
     }
 
     html = gerar_html(payload, tema)

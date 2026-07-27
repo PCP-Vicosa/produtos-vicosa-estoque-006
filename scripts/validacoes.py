@@ -27,6 +27,7 @@ BD_022 = DATA_DIR / "estoque-022" / "BD_022.xlsx"
 ADERENCIA = DATA_DIR / "aderencia" / "Producao_Semanal_PowerBI.xlsx"
 DIM_PESO = DATA_DIR / "Dim_Peso_Produto.csv"
 DIM_NOME = DATA_DIR / "Dim_Nome_Curto_Produto.csv"
+DE_PARA = DATA_DIR / "Dim_DePara_Produto.csv"
 
 # Variação diária de saldo acima disto é tratada como suspeita de extração
 # incompleta (em uma fábrica em operação normal o estoque não muda tanto de
@@ -246,11 +247,49 @@ def validar_aderencia() -> list:
     return problemas
 
 
+def validar_de_para() -> list:
+    """Todo nome de produto da aderência precisa existir no de-para, e todo
+    código apontado precisa existir na dimensão de produto. Sem isso, um
+    produto novo entraria na base e sumiria dos cruzamentos em silêncio."""
+    problemas = []
+    if not DE_PARA.exists():
+        return [_aviso("De-Para", "Dim_DePara_Produto.csv não encontrado — "
+                                  "nenhum cruzamento entre aderência e estoque é possível.")]
+    if not ADERENCIA.exists():
+        return problemas
+
+    dp = pd.read_csv(DE_PARA, sep=";", dtype=str).fillna("")
+    ad = pd.read_excel(ADERENCIA, sheet_name="Dados_Consolidados")
+    nomes = set(ad["Produto"].dropna().astype(str))
+
+    novos = sorted(nomes - set(dp["Produto_Aderencia"]))
+    if novos:
+        problemas.append(_erro("De-Para",
+                               f"{len(novos)} produto(s) da aderência sem linha no "
+                               f"de-para: {novos[:5]}. Cadastre o código SAP."))
+
+    sem_cod = sorted(dp.loc[dp["Produto"].str.strip() == "", "Produto_Aderencia"])
+    if sem_cod:
+        problemas.append(_aviso("De-Para",
+                                f"{len(sem_cod)} produto(s) sem código SAP "
+                                f"(não existem no estoque): {sem_cod}."))
+
+    if DIM_NOME.exists():
+        validos = set(pd.read_csv(DIM_NOME, sep=";", dtype=str)["Produto"])
+        maus = sorted(set(dp.loc[dp["Produto"].str.strip() != "", "Produto"]) - validos)
+        if maus:
+            problemas.append(_erro("De-Para",
+                                   f"{len(maus)} código(s) do de-para não existem na "
+                                   f"dimensão de produto: {maus[:5]}."))
+    return problemas
+
+
 def validar_tudo() -> list:
     problemas = []
     problemas += validar_estoque_006()
     problemas += validar_aderencia()
     problemas += validar_estoque_022()
+    problemas += validar_de_para()
     return problemas
 
 
