@@ -337,6 +337,9 @@ function resolveVar(name) {
 function fmtPct(n) { return n === null || n === undefined || isNaN(n) ? '-' : n.toFixed(2).replace('.', ',') + '%'; }
 function fmtMil(n) { return n === null || n === undefined ? '-' : (n / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' Mil'; }
 function fmtNum(n) { return n === null || n === undefined ? '-' : n.toLocaleString('pt-BR', { maximumFractionDigits: 0 }); }
+// Valores em KG: sempre por extenso (sem abreviar em "Mil"), com separador
+// de milhar "." e 2 casas decimais separadas por ",", ex: 36.927,20 kg.
+function formatKg(n) { return n === null || n === undefined ? '-' : n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kg'; }
 
 // ---------------------------------------------------------------
 // Tabelas com colunas clicáveis (ordenação) — clique 1x ordena
@@ -526,11 +529,13 @@ function calcularIndicadores(regs) {
   const progAjust = regs.reduce((a, r) => a + r.programado_ajustado_kg, 0);
   const prodAjust = regs.reduce((a, r) => a + r.produzido_ajustado_kg, 0);
   const qtdProduzida = regs.reduce((a, r) => a + r.produzido_un, 0);
+  const qtdProduzidaKg = regs.reduce((a, r) => a + r.produzido_kg, 0);
   return {
     demXProd: demanda > 0 ? 100 * prodAjust / demanda : null,
     demXProg: demanda > 0 ? 100 * progAjust / demanda : null,
     progXProd: progAjust > 0 ? 100 * prodAjust / progAjust : null,
     qtdProduzida,
+    qtdProduzidaKg,
   };
 }
 
@@ -556,7 +561,8 @@ function statTiles(ind) {
     <div class="stat-tile"><div class="label">Demandado × Produzido</div><div class="value">${fmtPct(ind.demXProd)}</div></div>
     <div class="stat-tile"><div class="label">Demandado × Programado</div><div class="value">${fmtPct(ind.demXProg)}</div></div>
     <div class="stat-tile"><div class="label">Programado × Produzido</div><div class="value">${fmtPct(ind.progXProd)}</div></div>
-    <div class="stat-tile"><div class="label">Quantidade Produzida</div><div class="value" style="font-size:22px">${fmtMil(ind.qtdProduzida)}</div></div>`;
+    <div class="stat-tile"><div class="label">Quantidade Produzida (un)</div><div class="value" style="font-size:22px">${fmtMil(ind.qtdProduzida)}</div></div>
+    <div class="stat-tile"><div class="label">Quantidade Produzida (kg)</div><div class="value" style="font-size:22px">${formatKg(ind.qtdProduzidaKg)}</div></div>`;
 }
 
 // ---------------------------------------------------------------
