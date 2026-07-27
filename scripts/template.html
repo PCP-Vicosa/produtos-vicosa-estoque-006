@@ -678,10 +678,10 @@ function renderGeral() {
   const traceLinha = {
     x: datas, y: totalKg,
     type: 'scatter', mode: 'lines+markers+text',
-    line: { color: resolveVar('--brand'), width: 2 },
+    line: { color: resolveVar('--brand'), width: 2, shape: 'spline', smoothing: 1.3 },
     marker: { size: 7, color: resolveVar('--brand') },
     text: totalKg.map(formatKg), textposition: 'top center',
-    textfont: { size: 10, color: resolveVar('--text-secondary') },
+    textfont: { size: ROTULO_FONTE, color: resolveVar('--text-secondary') },
     hovertemplate: '%{x}<br>%{y:,.0f} kg<extra></extra>',
   };
   Plotly.newPlot('chartGeralLinha', [traceLinha], baseLayout(), { displayModeBar: false, responsive: true });
@@ -698,6 +698,7 @@ function renderGeral() {
     marker: { color: resolveVar('--brand') },
     text: setores.map(s => formatKg(s.valor)),
     textposition: 'outside',
+    textfont: { size: ROTULO_FONTE_BARRA },
     hovertemplate: '%{y}: %{x:,.0f} kg<extra></extra>',
   };
   const layoutSetor = baseLayout();
@@ -738,6 +739,7 @@ function renderFaixas() {
     // formatMedida ja acrescenta a unidade — nao repetir aqui.
     text: f.map(r => formatMedida(valor(r), medidaFaixas) + '<br>' + r.lotes + ' lotes'),
     textposition: 'outside',
+    textfont: { size: ROTULO_FONTE_BARRA },
     hovertemplate: `%{x} da vida útil consumida<br>%{y:,.0f} ${rotuloEixo}<extra></extra>`,
   };
   const layout = baseLayout();
@@ -778,6 +780,7 @@ function renderCobertura() {
     marker: { color: lista.map(v => cor(v.cobertura_dias)) },
     text: lista.map(v => v.cobertura_dias.toFixed(1) + ' d'),
     textposition: 'outside',
+    textfont: { size: ROTULO_FONTE_BARRA },
     hovertemplate: '%{y}<br>%{x:.1f} dias de cobertura<extra></extra>',
   };
   const layout = baseLayout();
@@ -857,10 +860,10 @@ function renderFamilia() {
   const traceLinha = {
     x: datas, y: totalPorDia,
     type: 'scatter', mode: 'lines+markers+text',
-    line: { color: resolveVar('--brand'), width: 2 },
+    line: { color: resolveVar('--brand'), width: 2, shape: 'spline', smoothing: 1.3 },
     marker: { size: 7, color: resolveVar('--brand') },
     text: totalPorDia.map(formatKg), textposition: 'top center',
-    textfont: { size: 10, color: resolveVar('--text-secondary') },
+    textfont: { size: ROTULO_FONTE, color: resolveVar('--text-secondary') },
     hovertemplate: '%{x}<br>%{y:,.0f} kg<extra></extra>',
   };
   Plotly.newPlot('chartFamiliaLinha', [traceLinha], baseLayout(), { displayModeBar: false, responsive: true });
@@ -892,6 +895,7 @@ function renderFamilia() {
     measure: [...skus.map(() => 'relative'), 'total'],
     text: [...skus.map(s => fmtWf(s.valor)), fmtWf(total)],
     textposition: 'outside',
+    textfont: { size: ROTULO_FONTE_BARRA },
     connector: { line: { color: resolveVar('--gridline') } },
     increasing: { marker: { color: resolveVar('--brand') } },
     totals: { marker: { color: resolveVar('--text-secondary') } },

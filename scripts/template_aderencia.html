@@ -380,6 +380,11 @@ function th(label, key, tableId, extraClass) {
   return `<th class="${cls.join(' ')}" onclick="onSortClick('${tableId}','${key}')">${label}${seta}</th>`;
 }
 
+// Tamanho dos rotulos de dados. Valores 15% acima do padrao anterior
+// (10 e 12), para leitura a distancia na TV do deposito.
+const ROTULO_FONTE = 11.5;         // rotulos sobre linhas
+const ROTULO_FONTE_BARRA = 13.8;   // rotulos sobre barras/waterfall
+
 function baseLayout() {
   return {
     margin: { l: 55, r: 20, t: 10, b: 60 },
@@ -608,6 +613,7 @@ function renderGeral(regsMes) {
     x: rotulosMes, y: t.y, name: t.name, type: 'bar',
     marker: { color: t.color },
     text: t.y.map(fmtPct), textposition: 'outside',
+    textfont: { size: ROTULO_FONTE_BARRA },
     hovertemplate: '%{x}<br>%{y:.2f}%<extra></extra>',
   }));
   const layout = baseLayout();
@@ -653,6 +659,7 @@ function renderSemanal(regsMes) {
     x: semanasInfo.map(si => si.label), y: t.y, name: t.name, type: 'bar',
     marker: { color: t.color },
     text: t.y.map(fmtPct), textposition: 'outside',
+    textfont: { size: ROTULO_FONTE_BARRA },
     hovertemplate: '%{x}<br>%{y:.2f}%<extra></extra>',
   }));
   const layout = baseLayout();
