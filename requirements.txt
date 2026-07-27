@@ -1,2 +1,4 @@
-pandas
-openpyxl
+# Versoes testadas neste projeto. Mantenha os limites superiores para evitar
+# que uma atualizacao mude o comportamento de leitura do Excel sem aviso.
+pandas>=2.2,<4.0
+openpyxl>=3.1,<4.0

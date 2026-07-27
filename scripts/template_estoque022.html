@@ -34,6 +34,10 @@
   h1 { font-size: 20px; margin: 0; color: var(--brand); font-weight: 600; }
   .subtitle { color: var(--text-secondary); font-size: 12px; }
   .page-desc { color: var(--text-secondary); font-size: 13px; margin: 4px 0 18px; }
+  .alerta { border-radius: 8px; padding: 12px 16px; margin: 0 0 18px; font-size: 13px; line-height: 1.5; border-left: 4px solid; }
+  .alerta strong { display: block; margin-bottom: 4px; font-size: 13.5px; }
+  .alerta.critico { background: #fdecea; border-color: #c0392b; color: #7b241c; }
+  .alerta.aviso { background: #fef5e7; border-color: #d68910; color: #7e5109; }
 
   .card {
     background: var(--surface-1);
@@ -248,6 +252,8 @@
   </header>
   <div class="page-desc">Produtos aguardando liberação da qualidade.</div>
 
+  <div id="e22Alerta"></div>
+
   <div class="card filters">
     <div class="filter-group">
       <label for="e22Setor">Setor</label>
@@ -287,6 +293,39 @@ const THEME = __THEME_DATA__;
 
 document.getElementById('geradoEm').textContent =
   'Atualizado em ' + DATA.data_arquivo + ' · dados gerados em ' + DATA.gerado_em;
+
+// ---------------------------------------------------------------
+// Aviso de defasagem da base
+// ---------------------------------------------------------------
+// O BD_022.xlsx é sobrescrito manualmente. Quando ele fica para trás em
+// relação ao último snapshot do BD_006, os lotes já liberados pela qualidade
+// continuam aparecendo aqui e passam a ser contados nos dois painéis. O build
+// detecta e remove esses lotes; este bloco comunica o que aconteceu.
+(function initAlerta() {
+  const av = DATA.alerta;
+  const box = document.getElementById('e22Alerta');
+  if (!av || !box) return;
+  const partes = [];
+  if (av.dias_defasagem > 0) {
+    partes.push(
+      `Esta base é de <b>${DATA.data_arquivo}</b>, enquanto o Estoque 006 já está em ` +
+      `<b>${av.data_006}</b> — uma defasagem de <b>${av.dias_defasagem} dia(s)</b>. ` +
+      `Exporte o BD_022 novamente para ter a leitura correta do depósito.`
+    );
+  }
+  if (av.lotes_removidos > 0) {
+    partes.push(
+      `Para evitar contagem em duplicidade, <b>${av.lotes_removidos} lote(s)</b> ` +
+      `(<b>${formatKg(av.kg_removidos)}</b>) foram retirados deste painel porque já ` +
+      `constam no Depósito 006 na data mais recente — ou seja, já foram liberados.`
+    );
+  }
+  if (!partes.length) return;
+  box.innerHTML =
+    `<div class="alerta ${av.dias_defasagem > 1 ? 'critico' : 'aviso'}">` +
+    `<strong>Atenção: a base deste painel está desatualizada</strong>` +
+    partes.join('<br>') + `</div>`;
+})();
 
 // ---------------------------------------------------------------
 // Painel lateral recolhível (o estado marcado fica salvo no navegador)

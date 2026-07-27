@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .venv/
 .DS_Store
+# Arquivos de bloqueio criados pelo Excel quando a planilha esta aberta
+~$*.xlsx
+~$*.xls

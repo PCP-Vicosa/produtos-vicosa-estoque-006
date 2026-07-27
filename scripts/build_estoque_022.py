@@ -35,6 +35,7 @@ import pandas as pd
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 BD_PATH = DATA_DIR / "estoque-022" / "BD_022.xlsx"
+BD_006_PATH = DATA_DIR / "BD_006.xlsx"
 PESO_PATH = DATA_DIR / "Dim_Peso_Produto.csv"
 NOME_PATH = DATA_DIR / "Dim_Nome_Curto_Produto.csv"
 OUTPUT_PATH = BASE_DIR / "docs" / "estoque-022" / "index.html"
@@ -160,6 +161,55 @@ def carregar_dados() -> pd.DataFrame:
     return df
 
 
+def conferir_contra_006(df: pd.DataFrame, data_arquivo: str) -> tuple[pd.DataFrame, dict]:
+    """Compara o snapshot do Depósito 022 com o último snapshot do Depósito 006.
+
+    O BD_022.xlsx é sobrescrito manualmente e, quando isso não é feito no mesmo
+    dia da extração do BD_006, os lotes que já foram liberados pela qualidade
+    continuam listados aqui — passando a ser contados nos dois painéis ao mesmo
+    tempo. Um lote que aparece no 006 na data mais recente já saiu da qualidade
+    por definição, então ele é removido deste painel e o fato é registrado para
+    ser comunicado na página.
+
+    Retorna o DataFrame já limpo e o dicionário de alerta para o payload.
+    """
+    alerta = {"dias_defasagem": 0, "data_006": None,
+              "lotes_removidos": 0, "kg_removidos": 0.0}
+
+    if not BD_006_PATH.exists():
+        print("[aviso] BD_006.xlsx não encontrado — a conferência entre os "
+              "depósitos foi pulada.")
+        return df, alerta
+
+    d6 = pd.read_excel(BD_006_PATH, usecols=["Data Estoque", "Lote Fab."])
+    d6["Data Estoque"] = pd.to_datetime(d6["Data Estoque"], errors="coerce")
+    ultima = d6["Data Estoque"].max()
+    if pd.isna(ultima):
+        return df, alerta
+
+    alerta["data_006"] = ultima.strftime("%d/%m/%Y")
+    data_022 = pd.to_datetime(data_arquivo, format="%d/%m/%Y")
+    alerta["dias_defasagem"] = max(0, (ultima.normalize() - data_022.normalize()).days)
+
+    lotes_006 = set(d6.loc[d6["Data Estoque"] == ultima, "Lote Fab."].astype(str))
+    ja_liberados = df["Lote Fab."].astype(str).isin(lotes_006)
+
+    if ja_liberados.any():
+        alerta["lotes_removidos"] = int(ja_liberados.sum())
+        alerta["kg_removidos"] = round(float(df.loc[ja_liberados, "Saldo KG"].sum()), 2)
+        print(f"[ALERTA] {alerta['lotes_removidos']} lote(s) do BD_022 já constam no "
+              f"Depósito 006 de {alerta['data_006']} ({alerta['kg_removidos']:,.2f} kg). "
+              f"Foram removidos deste painel para não haver contagem em duplicidade.")
+        df = df[~ja_liberados]
+
+    if alerta["dias_defasagem"] > 0:
+        print(f"[ALERTA] O BD_022.xlsx é de {data_arquivo} e o BD_006 já está em "
+              f"{alerta['data_006']} — defasagem de {alerta['dias_defasagem']} dia(s). "
+              f"Exporte o BD_022 novamente.")
+
+    return df, alerta
+
+
 def montar_filtros(df: pd.DataFrame) -> dict:
     setores = sorted(df["Setor"].unique())
     produtos = (
@@ -235,9 +285,12 @@ def main():
         .strftime("%d/%m/%Y")
     )
 
+    df, alerta = conferir_contra_006(df, data_arquivo)
+
     payload = {
         "gerado_em": pd.Timestamp.now(tz="America/Sao_Paulo").strftime("%d/%m/%Y %H:%M"),
         "data_arquivo": data_arquivo,
+        "alerta": alerta,
         "filtros": montar_filtros(df),
         "lotes": montar_lotes(df),
     }
