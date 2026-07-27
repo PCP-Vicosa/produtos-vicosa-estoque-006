@@ -465,6 +465,11 @@ function formatMil(n) {
 }
 // Valores em KG: sempre por extenso (sem abreviar em "Mil"), com separador
 // de milhar "." e 2 casas decimais separadas por ",", ex: 36.927,20 kg.
+// Tamanho dos rotulos de dados. Valores 15% acima do padrao anterior
+// (10 e 12), para leitura a distancia.
+const ROTULO_FONTE = 11.5;         // rotulos sobre linhas
+const ROTULO_FONTE_BARRA = 13.8;   // rotulos sobre barras/waterfall
+
 function formatKg(n) {
   if (n === null || n === undefined) return '-';
   return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kg';
