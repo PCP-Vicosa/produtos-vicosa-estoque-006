@@ -74,7 +74,8 @@ def gerar_paineis() -> bool:
         r = subprocess.run([sys.executable, str(SCRIPTS / script)],
                            cwd=str(BASE_DIR))
         if r.returncode != 0:
-            print(f"[ERRO] {nome} falhou (codigo {r.returncode}).")
+            print(f"[ERRO] {nome} falhou (codigo {r.returncode}). A pagina anterior "
+                  f"deste painel continua no ar, sem atualizacao.")
             ok = False
     return ok
 
@@ -120,9 +121,11 @@ def main():
     ignorar = "--ignorar-erros" in sys.argv
     if not rodar_validacoes(ignorar):
         sys.exit(1)
-    if not gerar_paineis():
-        sys.exit(1)
+    todos_ok = gerar_paineis()
     resumo()
+    if not todos_ok:
+        print("Atencao: pelo menos um painel nao foi atualizado. Veja o erro acima.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -165,7 +165,16 @@ def validar_estoque_022() -> list:
     try:
         df = ler_excel_robusto(BD_022)
     except Exception as e:
-        return [_erro("BD_022", f"não foi possível ler o arquivo: {e}")]
+        # Arquivo exportado pelo SAP com defeito interno. O conserto automático
+        # depende do LibreOffice, que pode não existir na máquina. Isso impede
+        # apenas o painel 022 — os outros dois continuam podendo ser gerados,
+        # por isso é AVISO e não ERRO.
+        return [_aviso("BD_022",
+                       f"não foi possível ler o arquivo ({e}). SOLUÇÃO: abra o "
+                       f"BD_022.xlsx no Excel e use Salvar como > Pasta de "
+                       f"Trabalho do Excel (.xlsx), no mesmo local e com o mesmo "
+                       f"nome. O painel do 022 não será atualizado até isso ser "
+                       f"feito; os outros dois painéis seguem normalmente.")]
 
     if df.empty:
         return [_erro("BD_022", "a planilha está vazia.")]
