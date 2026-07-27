@@ -711,6 +711,15 @@ function renderFamilia() {
 
   const total = skus.reduce((acc, s) => acc + s.valor, 0);
 
+  // Hover mostra o valor individual do SKU e, entre parênteses, o
+  // acumulado da pilha até aquele ponto (não o total geral).
+  let acumulado = 0;
+  const hoverSkus = skus.map(s => {
+    acumulado += s.valor;
+    return `${s.sku}: ${formatKg(s.valor)} (Pilha ${formatKg(acumulado)})`;
+  });
+  const hoverTotal = `Total: ${formatKg(total)}`;
+
   const traceWaterfall = {
     type: 'waterfall',
     orientation: 'v',
@@ -722,7 +731,8 @@ function renderFamilia() {
     connector: { line: { color: resolveVar('--gridline') } },
     increasing: { marker: { color: resolveVar('--brand') } },
     totals: { marker: { color: resolveVar('--text-secondary') } },
-    hovertemplate: '%{x}: %{y:,.0f} kg<extra></extra>',
+    customdata: [...hoverSkus, hoverTotal],
+    hovertemplate: '%{customdata}<extra></extra>',
   };
   const layoutWaterfall = baseLayout();
   layoutWaterfall.margin.b = 90;
