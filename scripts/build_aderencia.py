@@ -179,7 +179,7 @@ def main():
         tema = json.loads(TEMA_PATH.read_text(encoding="utf-8-sig"))
 
     payload = {
-        "gerado_em": pd.Timestamp.now().strftime("%d/%m/%Y %H:%M"),
+        "gerado_em": pd.Timestamp.now(tz="America/Sao_Paulo").strftime("%d/%m/%Y %H:%M"),
         "filtros": montar_filtros(df),
         "registros": montar_registros(df),
     }

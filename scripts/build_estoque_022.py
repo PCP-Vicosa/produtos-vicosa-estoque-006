@@ -229,10 +229,14 @@ def main():
     # Data de atualização = data de modificação do arquivo BD_022.xlsx
     # (o dia em que a leitura foi sobrescrita), não a hora em que este
     # script rodou.
-    data_arquivo = datetime.fromtimestamp(BD_PATH.stat().st_mtime).strftime("%d/%m/%Y")
+    data_arquivo = (
+        pd.Timestamp(BD_PATH.stat().st_mtime, unit="s", tz="UTC")
+        .tz_convert("America/Sao_Paulo")
+        .strftime("%d/%m/%Y")
+    )
 
     payload = {
-        "gerado_em": pd.Timestamp.now().strftime("%d/%m/%Y %H:%M"),
+        "gerado_em": pd.Timestamp.now(tz="America/Sao_Paulo").strftime("%d/%m/%Y %H:%M"),
         "data_arquivo": data_arquivo,
         "filtros": montar_filtros(df),
         "lotes": montar_lotes(df),
