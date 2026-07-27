@@ -153,17 +153,27 @@ def montar_evolucao_sku(df: pd.DataFrame) -> dict:
     datas = sorted(df["Data Estoque"].unique())
     datas_fmt = [fmt_data(d) for d in datas]
 
-    agrup = df.groupby(["Setor", "Nome Curto", "Data Estoque"])["Saldo KG"].sum()
+    chave = ["Setor", "Nome Curto", "Data Estoque"]
+    agrup = df.groupby(chave)["Saldo KG"].sum()
+    # Mesma serie em unidades (caixas/pecas), para o botao kg/unidade da
+    # interface. Sao duas leituras diferentes do mesmo saldo: um SKU pesado
+    # domina em kg e some em unidade, e vice-versa.
+    agrup_un = df.groupby(chave)["Saldo Lote"].sum()
 
-    resultado = {}
+    resultado, resultado_un = {}, {}
     for setor, grupo in df.groupby("Setor"):
         skus = sorted(grupo["Nome Curto"].unique())
         resultado[setor] = {
             sku: [round(float(agrup.get((setor, sku, d), 0)), 1) for d in datas]
             for sku in skus
         }
+        resultado_un[setor] = {
+            sku: [int(agrup_un.get((setor, sku, d), 0)) for d in datas]
+            for sku in skus
+        }
 
-    return {"datas": datas_fmt, "por_setor_sku": resultado}
+    return {"datas": datas_fmt, "por_setor_sku": resultado,
+            "por_setor_sku_un": resultado_un}
 
 
 def montar_lotes_por_data(df: pd.DataFrame) -> dict:
@@ -317,10 +327,12 @@ def montar_faixas_validade(df: pd.DataFrame) -> dict:
     for rotulo, ini, fim in FAIXAS:
         m = (~g["vencido"]) & (g["pct_consumido"] >= ini) & (g["pct_consumido"] < fim)
         faixas.append({"faixa": rotulo, "lotes": int(m.sum()),
-                       "kg": round(float(g.loc[m, "Saldo KG"].sum()), 2)})
+                       "kg": round(float(g.loc[m, "Saldo KG"].sum()), 2),
+                       "un": int(g.loc[m, "Saldo Lote"].sum())})
     m = g["vencido"]
     faixas.append({"faixa": "Vencido", "lotes": int(m.sum()),
-                   "kg": round(float(g.loc[m, "Saldo KG"].sum()), 2)})
+                   "kg": round(float(g.loc[m, "Saldo KG"].sum()), 2),
+                   "un": int(g.loc[m, "Saldo Lote"].sum())})
 
     dias_venc = (g["Data Validade"] - ultima).dt.days
     return {

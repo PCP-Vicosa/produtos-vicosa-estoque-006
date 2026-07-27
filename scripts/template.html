@@ -53,6 +53,16 @@
   }
   nav.tabs button.active { color: var(--brand); border-bottom-color: var(--brand); }
 
+  /* Alternador de unidade de medida (kg <-> unidades) no canto do card. */
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .card-head h2 { margin: 0; }
+  .unidade-toggle { display: inline-flex; border: 1px solid var(--gridline); border-radius: 6px; overflow: hidden; flex: none; }
+  .unidade-toggle button {
+    font: inherit; font-size: 12px; padding: 4px 12px; border: 0; cursor: pointer;
+    background: transparent; color: var(--text-secondary);
+  }
+  .unidade-toggle button + button { border-left: 1px solid var(--gridline); }
+  .unidade-toggle button.ativo { background: var(--brand); color: #fff; }
   .nota-metodo { font-size: 11px; color: var(--text-secondary); margin: 8px 0 0; line-height: 1.45; }
   .card {
     background: var(--surface-1);
@@ -324,7 +334,13 @@
 
     <div class="grid-2">
       <div class="card">
-        <h2>Vida útil já consumida (kg por faixa)</h2>
+        <div class="card-head">
+          <h2 id="faixasTitle">Vida útil já consumida (kg por faixa)</h2>
+          <div class="unidade-toggle" id="faixasUnidade">
+            <button type="button" data-medida="kg" class="ativo">kg</button>
+            <button type="button" data-medida="un">Unidade</button>
+          </div>
+        </div>
         <div id="chartFaixas" class="chart-tall"></div>
       </div>
       <div class="card">
@@ -358,7 +374,13 @@
     </div>
 
     <div class="card">
-      <h2 id="familiaWaterfallTitle">Saldo disponível (kg) x SKU</h2>
+      <div class="card-head">
+        <h2 id="familiaWaterfallTitle">Saldo disponível (kg) x SKU</h2>
+        <div class="unidade-toggle" id="familiaUnidade">
+          <button type="button" data-medida="kg" class="ativo">kg</button>
+          <button type="button" data-medida="un">Unidade</button>
+        </div>
+      </div>
       <div id="chartFamiliaWaterfall" class="chart-tall"></div>
     </div>
   </section>
@@ -446,6 +468,28 @@ function formatMil(n) {
 function formatKg(n) {
   if (n === null || n === undefined) return '-';
   return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kg';
+}
+
+function formatUn(n) {
+  if (n === null || n === undefined) return '-';
+  return n.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' un';
+}
+
+// Formata conforme a medida escolhida no botao do card ('kg' ou 'un').
+function formatMedida(n, medida) {
+  return medida === 'un' ? formatUn(n) : formatKg(n);
+}
+
+// Liga um par de botoes kg/Unidade e chama o callback com a medida escolhida.
+function ligarToggleUnidade(id, aoTrocar) {
+  const box = document.getElementById(id);
+  if (!box) return;
+  box.addEventListener('click', ev => {
+    const btn = ev.target.closest('button[data-medida]');
+    if (!btn || btn.classList.contains('ativo')) return;
+    box.querySelectorAll('button').forEach(b => b.classList.toggle('ativo', b === btn));
+    aoTrocar(btn.dataset.medida);
+  });
 }
 
 // ---------------------------------------------------------------
@@ -675,24 +719,36 @@ const CORES_FAIXA = {
   '75-100%': '#ef6c00', 'Vencido': '#c62828',
 };
 
+let medidaFaixas = 'kg';
+
 function renderFaixas() {
   const f = FX.faixas || [];
   if (!f.length) return;
+  const un = medidaFaixas === 'un';
+  const valor = r => (un ? (r.un || 0) : r.kg);
+  const rotuloEixo = un ? 'unidades' : 'kg';
+
+  const titulo = document.getElementById('faixasTitle');
+  if (titulo) titulo.textContent = `Vida útil já consumida (${rotuloEixo} por faixa)`;
+
   const trace = {
-    x: f.map(r => r.faixa), y: f.map(r => r.kg),
+    x: f.map(r => r.faixa), y: f.map(valor),
     type: 'bar',
     marker: { color: f.map(r => CORES_FAIXA[r.faixa] || '#999') },
-    text: f.map(r => formatKg(r.kg) + ' kg<br>' + r.lotes + ' lotes'),
+    // formatMedida ja acrescenta a unidade — nao repetir aqui.
+    text: f.map(r => formatMedida(valor(r), medidaFaixas) + '<br>' + r.lotes + ' lotes'),
     textposition: 'outside',
-    hovertemplate: '%{x} da vida útil consumida<br>%{y:,.0f} kg<extra></extra>',
+    hovertemplate: `%{x} da vida útil consumida<br>%{y:,.0f} ${rotuloEixo}<extra></extra>`,
   };
   const layout = baseLayout();
   layout.margin.t = 30;
-  layout.yaxis.title = { text: 'kg', font: { size: 11 } };
-  const max = Math.max(...f.map(r => r.kg), 0);
+  layout.yaxis.title = { text: rotuloEixo, font: { size: 11 } };
+  const max = Math.max(...f.map(valor), 0);
   layout.yaxis.range = [0, max * 1.25];
   Plotly.newPlot('chartFaixas', [trace], layout, { displayModeBar: false, responsive: true });
 }
+
+ligarToggleUnidade('faixasUnidade', m => { medidaFaixas = m; renderFaixas(); });
 
 function renderCobertura() {
   const lista = Object.values(COB.por_sku || {})
@@ -753,6 +809,8 @@ document.getElementById('geralPeriodo').addEventListener('change', renderGeral);
 const setoresDisponiveis = Object.keys(DATA.evolucao_sku.por_setor_sku).sort();
 const familiaSetorMultiselect = createMultiSelect('familiaSetor', setoresDisponiveis, [setoresDisponiveis[0]]);
 
+let medidaFamilia = 'kg';
+
 function renderFamilia() {
   const setoresSelecionados = [...familiaSetorMultiselect.getSelected()];
   const periodo = document.getElementById('familiaPeriodo').value;
@@ -764,7 +822,9 @@ function renderFamilia() {
       ? setoresSelecionados.join(', ')
       : `${setoresSelecionados.length} setores`;
   document.getElementById('familiaLinhaTitle').textContent = `Saldo disponível (kg) x Data — ${tituloSetor}`;
-  document.getElementById('familiaWaterfallTitle').textContent = `Saldo disponível (kg) x SKU — ${tituloSetor}`;
+  const medidaWfLabel = medidaFamilia === 'un' ? 'unidades' : 'kg';
+  document.getElementById('familiaWaterfallTitle').textContent =
+    `Saldo disponível (${medidaWfLabel}) x SKU — ${tituloSetor}`;
 
   if (setoresSelecionados.length === 0) {
     Plotly.newPlot('chartFamiliaLinha', [], baseLayout(), { displayModeBar: false, responsive: true });
@@ -774,12 +834,18 @@ function renderFamilia() {
 
   // Junta os SKUs de todos os setores selecionados. Prefixa com o nome do
   // setor quando mais de um estiver selecionado, para evitar ambiguidade.
-  const skuMap = {};
+  const skuMap = {};      // sempre em kg — alimenta a linha e o total do periodo
+  const skuMapWf = {};    // na medida escolhida no botao — alimenta o waterfall
+  const fonteWf = medidaFamilia === 'un'
+    ? (DATA.evolucao_sku.por_setor_sku_un || DATA.evolucao_sku.por_setor_sku)
+    : DATA.evolucao_sku.por_setor_sku;
   setoresSelecionados.forEach(setor => {
     const mapaDoSetor = DATA.evolucao_sku.por_setor_sku[setor] || {};
+    const mapaWf = fonteWf[setor] || {};
     Object.entries(mapaDoSetor).forEach(([sku, serie]) => {
       const chave = setoresSelecionados.length > 1 ? `${setor} — ${sku}` : sku;
       skuMap[chave] = serie;
+      skuMapWf[chave] = mapaWf[sku] || serie;
     });
   });
 
@@ -801,8 +867,8 @@ function renderFamilia() {
 
   // Waterfall por SKU, última data do período selecionado
   const idxUltima = DATA.evolucao_sku.datas.length - 1;
-  const skus = Object.keys(skuMap)
-    .map(sku => ({ sku, valor: skuMap[sku][idxUltima] }))
+  const skus = Object.keys(skuMapWf)
+    .map(sku => ({ sku, valor: skuMapWf[sku][idxUltima] }))
     .filter(s => s.valor > 0)
     .sort((a, b) => b.valor - a.valor);
 
@@ -811,11 +877,12 @@ function renderFamilia() {
   // Hover mostra o valor individual do SKU e, entre parênteses, o
   // acumulado da pilha até aquele ponto (não o total geral).
   let acumulado = 0;
+  const fmtWf = v => formatMedida(v, medidaFamilia);
   const hoverSkus = skus.map(s => {
     acumulado += s.valor;
-    return `${s.sku}: ${formatKg(s.valor)} (Pilha ${formatKg(acumulado)})`;
+    return `${s.sku}: ${fmtWf(s.valor)} (Pilha ${fmtWf(acumulado)})`;
   });
-  const hoverTotal = `Total: ${formatKg(total)}`;
+  const hoverTotal = `Total: ${fmtWf(total)}`;
 
   const traceWaterfall = {
     type: 'waterfall',
@@ -823,7 +890,7 @@ function renderFamilia() {
     x: [...skus.map(s => s.sku), 'Total'],
     y: [...skus.map(s => s.valor), total],
     measure: [...skus.map(() => 'relative'), 'total'],
-    text: [...skus.map(s => formatKg(s.valor)), formatKg(total)],
+    text: [...skus.map(s => fmtWf(s.valor)), fmtWf(total)],
     textposition: 'outside',
     connector: { line: { color: resolveVar('--gridline') } },
     increasing: { marker: { color: resolveVar('--brand') } },
@@ -836,6 +903,8 @@ function renderFamilia() {
   layoutWaterfall.xaxis.tickangle = -35;
   Plotly.newPlot('chartFamiliaWaterfall', [traceWaterfall], layoutWaterfall, { displayModeBar: false, responsive: true });
 }
+
+ligarToggleUnidade('familiaUnidade', m => { medidaFamilia = m; renderFamilia(); });
 
 familiaSetorMultiselect.onChange(renderFamilia);
 document.getElementById('familiaPeriodo').addEventListener('change', renderFamilia);
