@@ -278,6 +278,10 @@
       <h2>Evolução dos indicadores de aderência — comparativo mensal</h2>
       <div id="chartMensal" class="chart-tall"></div>
     </div>
+    <div class="card">
+      <h2>Produtos fabricados x produtos dentro da meta — mês a mês</h2>
+      <div id="chartProdutosMes" class="chart-tall"></div>
+    </div>
   </section>
 
   <!-- ===================== COMPARATIVO SEMANAL ===================== -->
@@ -407,7 +411,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('page-' + btn.dataset.page).classList.add('active');
-    ['chartMensal', 'chartSemanal'].forEach(id => { if (document.getElementById(id)) Plotly.Plots.resize(id); });
+    ['chartMensal', 'chartProdutosMes', 'chartSemanal'].forEach(id => { if (document.getElementById(id)) Plotly.Plots.resize(id); });
   });
 });
 
@@ -655,6 +659,40 @@ function renderGeral(regsMes) {
   }));
 
   Plotly.newPlot('chartMensal', traces, layout, { displayModeBar: false, responsive: true });
+
+  // ----- Produtos fabricados x dentro da meta, mes a mes -----
+  // Mesma janela de meses do grafico acima. Conta produtos distintos, nao kg:
+  // responde "de quantos itens eu perdi o controle neste mes?".
+  const contagem = meses.map((m, i) => {
+    const linhas = linhasPorProduto(regsAnos.filter(r => r.ano === m.ano && r.mes_num === m.mes_num));
+    const dentro = linhas.filter(l => l.dentro).length;
+    return { total: linhas.length, dentro, fora: linhas.length - dentro };
+  });
+
+  const SERIES_PROD = [
+    { name: 'Produtos fabricados', y: contagem.map(c => c.total), color: resolveVar('--series-1'), pos: 'top center' },
+    { name: 'Dentro da meta (95%–105%)', y: contagem.map(c => c.dentro), color: resolveVar('--good') || resolveVar('--series-2'), pos: 'bottom center' },
+    { name: 'Fora da meta', y: contagem.map(c => c.fora), color: resolveVar('--critical') || resolveVar('--series-3'), pos: 'bottom center' },
+  ];
+
+  const tracesProd = SERIES_PROD.map(t => ({
+    x: rotulosMes, y: t.y, name: t.name,
+    type: 'scatter', mode: 'lines+markers+text',
+    line: { color: t.color, width: 2.5, shape: 'spline', smoothing: 1.3 },
+    marker: { color: t.color, size: 7 },
+    text: t.y.map(v => fmtNum(v)), textposition: t.pos,
+    textfont: { size: ROTULO_FONTE, color: t.color },
+    cliponaxis: false,
+    hovertemplate: '%{x}<br>' + t.name + ': %{y} produto(s)<extra></extra>',
+  }));
+
+  const layoutProd = baseLayout();
+  layoutProd.yaxis.ticksuffix = '';
+  layoutProd.yaxis.rangemode = 'tozero';
+  const maxProd = Math.max(...SERIES_PROD.flatMap(t => t.y), 0);
+  layoutProd.yaxis.range = [0, maxProd * 1.2 + 2];
+  layoutProd.yaxis.title = { text: 'produtos', font: { size: 11 } };
+  Plotly.newPlot('chartProdutosMes', tracesProd, layoutProd, { displayModeBar: false, responsive: true });
 }
 
 // ---------------------------------------------------------------
@@ -706,23 +744,30 @@ function renderSemanal(regsMes) {
 // ---------------------------------------------------------------
 // PRODUTOS
 // ---------------------------------------------------------------
-function renderProdutos(regsMes) {
+// Consolida os registros por produto e devolve so os que dao para avaliar:
+// precisa ter sido produzido e ter tido programacao no periodo. Sem
+// programacao a aderencia e uma divisao por zero — o produto aparecia com
+// "-" e ainda assim era contado como "Fora da Meta", o que inflava o total.
+function linhasPorProduto(regs) {
   const porProduto = {};
-  regsMes.forEach(r => {
+  regs.forEach(r => {
     if (!porProduto[r.produto]) porProduto[r.produto] = { setor: r.setor, prog: 0, prod: 0 };
     porProduto[r.produto].prog += r.programado_kg;
     porProduto[r.produto].prod += r.produzido_kg;
   });
 
-  let linhas = Object.entries(porProduto)
+  return Object.entries(porProduto)
     .map(([produto, v]) => ({
       produto, setor: v.setor,
       aderencia: v.prog > 0 ? 100 * v.prod / v.prog : null,
       produzido: v.prod,
     }))
-    .filter(l => l.produzido > 0)
-    .map(l => ({ ...l, dentro: l.aderencia !== null && l.aderencia >= 95 && l.aderencia <= 105 }))
-    .sort((a, b) => b.aderencia - a.aderencia);
+    .filter(l => l.produzido > 0 && l.aderencia !== null)
+    .map(l => ({ ...l, dentro: l.aderencia >= 95 && l.aderencia <= 105 }));
+}
+
+function renderProdutos(regsMes) {
+  let linhas = linhasPorProduto(regsMes).sort((a, b) => b.aderencia - a.aderencia);
 
   const dentro = linhas.filter(l => l.dentro).length;
   const fora = linhas.length - dentro;
