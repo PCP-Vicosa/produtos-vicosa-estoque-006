@@ -566,8 +566,10 @@ function statTiles(ind) {
     <div class="stat-tile"><div class="label">Demandado × Produzido</div><div class="value">${fmtPct(ind.demXProd)}</div></div>
     <div class="stat-tile"><div class="label">Demandado × Programado</div><div class="value">${fmtPct(ind.demXProg)}</div></div>
     <div class="stat-tile"><div class="label">Programado × Produzido</div><div class="value">${fmtPct(ind.progXProd)}</div></div>
-    <div class="stat-tile"><div class="label">Quantidade Produzida (un)</div><div class="value" style="font-size:22px">${fmtMil(ind.qtdProduzida)}</div></div>
-    <div class="stat-tile"><div class="label">Quantidade Produzida (kg)</div><div class="value" style="font-size:22px">${formatKg(ind.qtdProduzidaKg)}</div></div>`;
+    <div class="stat-tile"><div class="label">Quantidade Produzida (un)</div><div class="value" style="font-size:22px">${fmtMil(ind.qtdProduzida)}</div></div>`;
+  // O card "Quantidade Produzida (kg)" foi removido: a base so registra o
+  // total por semana, entao ao filtrar dias soltos de um mes o valor somava
+  // semanas inteiras e ficava maior que o periodo escolhido.
 }
 
 // ---------------------------------------------------------------
