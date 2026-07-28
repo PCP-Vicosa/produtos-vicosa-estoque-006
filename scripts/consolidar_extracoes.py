@@ -16,6 +16,7 @@ aparecer em dois arquivos, vale o mais recente.
 Uso:
     python scripts/consolidar_extracoes.py
 """
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -36,6 +37,18 @@ HIST_022 = DATA_DIR / "estoque-022" / "historico"
 from build_estoque_022 import ler_excel_robusto  # noqa: E402
 
 
+def _data_do_nome(p: Path):
+    """Extrai DD-MM-AAAA (ou DD_MM_AAAA / DD.MM.AAAA) do nome do arquivo."""
+    m = re.search(r"(\d{2})[-_.](\d{2})[-_.](\d{4})", p.stem)
+    if not m:
+        return None
+    d, mes, a = m.groups()
+    try:
+        return pd.Timestamp(int(a), int(mes), int(d))
+    except ValueError:
+        return None
+
+
 def consolidar_006() -> bool:
     arquivos = sorted(p for p in EXTR_006.glob("*.xls*") if not p.name.startswith("~$"))
     if not arquivos:
@@ -43,6 +56,26 @@ def consolidar_006() -> bool:
         return False
 
     partes = []
+
+    # A base atual entra como ponto de partida. Sem isso a rotina regravaria o
+    # BD_006 apenas com os dias que ainda estao soltos na pasta de extracoes e
+    # apagaria todo o historico anterior. _mtime = 0 garante que, se o mesmo dia
+    # vier tambem de uma extracao, a extracao (mais nova) prevalece.
+    if BD_006.exists():
+        try:
+            base = ler_excel_robusto(BD_006)
+            if "Data Estoque" in base.columns:
+                base["Data Estoque"] = pd.to_datetime(base["Data Estoque"], errors="coerce")
+                base["_origem"] = "BD_006.xlsx (historico)"
+                base["_mtime"] = 0.0
+                partes.append(base)
+                d = base["Data Estoque"].dt.normalize().dropna().unique()
+                print(f"[006] historico atual: {len(base)} linhas, {len(d)} dia(s) "
+                      f"({pd.Timestamp(min(d)):%d/%m} a {pd.Timestamp(max(d)):%d/%m})")
+        except Exception as e:
+            print(f"[006] [AVISO] nao foi possivel ler o BD_006.xlsx atual ({e}). "
+                  f"A base sera remontada so com as extracoes.")
+
     for p in arquivos:
         try:
             df = ler_excel_robusto(p)
@@ -50,8 +83,18 @@ def consolidar_006() -> bool:
             print(f"[006] [ERRO] nao foi possivel ler {p.name}: {e}")
             continue
         if "Data Estoque" not in df.columns:
-            print(f"[006] [ERRO] {p.name} nao tem a coluna 'Data Estoque'. Ignorado.")
-            continue
+            # A extracao crua do SAP nao traz a data do snapshot — ela so existe
+            # na base historica, onde era digitada a mao. Tiramos do nome do
+            # arquivo ("BD_006 - 28-07-2026.xlsx"); sem isso a extracao seria
+            # descartada e o dia se perderia.
+            data = _data_do_nome(p)
+            if data is None:
+                print(f"[006] [ERRO] {p.name} nao tem a coluna 'Data Estoque' e "
+                      f"o nome do arquivo nao contem uma data (use "
+                      f"'BD_006 - DD-MM-AAAA.xlsx'). Ignorado.")
+                continue
+            df.insert(0, "Data Estoque", data)
+            print(f"[006] {p.name}: data {data:%d/%m/%Y} obtida do nome do arquivo.")
         df["Data Estoque"] = pd.to_datetime(df["Data Estoque"], errors="coerce")
         df["_origem"] = p.name
         df["_mtime"] = p.stat().st_mtime

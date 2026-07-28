@@ -42,9 +42,15 @@ def rodar(cmd):
     )
 
 
-def tem_mudancas():
+def estado_atual():
+    """Retorna a lista de arquivos alterados (texto). Vazio = nada a enviar.
+
+    Devolvemos o conteudo, e nao so um sim/nao, porque a estabilidade precisa
+    ser medida sobre "o que mudou". Comparar apenas "existe mudanca?" fazia o
+    contador reiniciar a cada verificacao e o commit nunca acontecia.
+    """
     r = rodar(["git", "status", "--porcelain"])
-    return bool(r.stdout.strip())
+    return r.stdout.strip()
 
 
 def sincronizar():
@@ -91,22 +97,27 @@ def main():
         print("Erro: esta pasta não é um repositório git. Rode 'git init' primeiro.")
         sys.exit(1)
 
-    tempo_desde_ultima_mudanca = None
+    estado_anterior = ""
+    marcado_em = None
 
     try:
         while True:
-            if tem_mudancas():
-                if tempo_desde_ultima_mudanca is None:
-                    tempo_desde_ultima_mudanca = time.time()
-                    print("Mudança detectada, aguardando estabilizar...")
-                elif time.time() - tempo_desde_ultima_mudanca >= TEMPO_ESTAVEL:
-                    sincronizar()
-                    tempo_desde_ultima_mudanca = None
-                else:
-                    # Ainda há mudanças, reseta o contador de estabilidade
-                    tempo_desde_ultima_mudanca = time.time()
-            else:
-                tempo_desde_ultima_mudanca = None
+            estado = estado_atual()
+
+            if not estado:
+                # Arvore limpa: nada pendente.
+                estado_anterior, marcado_em = "", None
+            elif estado != estado_anterior:
+                # A lista de arquivos alterados mudou desde a ultima checagem:
+                # ainda esta sendo mexido. Reinicia a contagem.
+                estado_anterior = estado
+                marcado_em = time.time()
+                n = len(estado.splitlines())
+                print(f"Mudança detectada ({n} arquivo(s)), aguardando estabilizar...")
+            elif marcado_em is not None and time.time() - marcado_em >= TEMPO_ESTAVEL:
+                # Mesma lista ha TEMPO_ESTAVEL segundos: pode enviar.
+                sincronizar()
+                estado_anterior, marcado_em = "", None
 
             time.sleep(INTERVALO_VERIFICACAO)
     except KeyboardInterrupt:
