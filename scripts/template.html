@@ -343,11 +343,6 @@
         </div>
         <div id="chartFaixas" class="chart-tall"></div>
       </div>
-      <div class="card">
-        <h2>Menor cobertura — risco de ruptura (dias)</h2>
-        <div id="chartCobertura" class="chart-tall"></div>
-        <p class="nota-metodo" id="notaCobertura"></p>
-      </div>
     </div>
   </section>
 
@@ -664,21 +659,12 @@ function renderGeral() {
       <div class="value" style="font-size:22px">${diff !== null ? formatKg(diff) : '-'}</div>
     </div>
     <div class="stat-tile">
-      <div class="label">Cobertura mediana (dias)</div>
-      <div class="value" style="font-size:22px">${COB.mediana !== null ? COB.mediana.toFixed(1) : '-'}</div>
-    </div>
-    <div class="stat-tile">
       <div class="label">Vencendo em 7 dias (kg)</div>
       <div class="value" style="font-size:22px">${formatKg(FX.kg_7dias)}</div>
     </div>
-    <div class="stat-tile">
-      <div class="label">Saldo livre / reservado (kg)</div>
-      <div class="value" style="font-size:16px">${RES.disponivel
-        ? formatKg(RES.livre_kg) + ' / ' + formatKg(RES.reservado_kg) : '-'}</div>
-    </div>`;
+`;
 
   renderFaixas();
-  renderCobertura();
 
   const traceLinha = {
     x: datas, y: totalKg,
@@ -757,46 +743,9 @@ function renderFaixas() {
 
 ligarToggleUnidade('faixasUnidade', m => { medidaFaixas = m; renderFaixas(); });
 
-function renderCobertura() {
-  const lista = Object.values(COB.por_sku || {})
-    .filter(v => v.cobertura_dias !== null)
-    .sort((a, b) => a.cobertura_dias - b.cobertura_dias)
-    .slice(0, 12)
-    .reverse();
-
-  const nota = document.getElementById('notaCobertura');
-  if (nota) {
-    nota.innerHTML =
-      `Consumo diário = soma das reduções de saldo, lote a lote, entre snapshots ` +
-      `consecutivos, dividida pelos ${COB.dias_serie} dias corridos da série. ` +
-      `Cobertura = saldo atual ÷ consumo diário. Mediana de ` +
-      `<b>${COB.mediana !== null ? COB.mediana.toFixed(1) : '-'} dias</b>; ` +
-      `<b>${COB.criticos}</b> SKU(s) abaixo de 2 dias e <b>${COB.excesso}</b> acima de 30. ` +
-      `${COB.sem_consumo} SKU(s) sem nenhuma saída observada ficaram fora do cálculo. ` +
-      `Com poucos dias de histórico o número ainda é uma estimativa.`;
-  }
-  if (!lista.length) return;
-
-  const cor = d => d < 2 ? '#c62828' : (d < 5 ? '#ef6c00' : resolveVar('--brand'));
-  const trace = {
-    x: lista.map(v => v.cobertura_dias),
-    y: lista.map(v => v.nome),
-    type: 'bar', orientation: 'h',
-    marker: { color: lista.map(v => cor(v.cobertura_dias)) },
-    text: lista.map(v => v.cobertura_dias.toFixed(1) + ' d'),
-    textposition: 'outside',
-    textfont: { size: ROTULO_FONTE_BARRA },
-    hovertemplate: '%{y}<br>%{x:.1f} dias de cobertura<extra></extra>',
-  };
-  const layout = baseLayout();
-  layout.margin.l = 150;
-  layout.margin.r = 60;
-  const max = Math.max(...lista.map(v => v.cobertura_dias), 1);
-  layout.xaxis.range = [0, max * 1.2];
-  layout.xaxis.title = { text: 'dias', font: { size: 11 } };
-  Plotly.newPlot('chartCobertura', [trace], layout, { displayModeBar: false, responsive: true });
-}
-
+// A funcao renderCobertura foi removida junto com o card "Menor cobertura".
+// O calculo continua no build (DATA.cobertura), entao basta reinserir o
+// <div id="chartCobertura"> e a funcao se o indicador voltar a ser usado.
 function baseLayout() {
   return {
     margin: { l: 55, r: 20, t: 10, b: 40 },
