@@ -330,7 +330,13 @@
 
     <div class="grid-2">
       <div class="card">
-        <h2>Saldo por Setor (kg)</h2>
+        <div class="card-head">
+          <h2 id="setorTitle">Saldo por Setor (kg)</h2>
+          <div class="unidade-toggle" id="setorUnidade">
+            <button type="button" data-medida="kg" class="ativo">kg</button>
+            <button type="button" data-medida="un">Unidade</button>
+          </div>
+        </div>
         <div id="chartGeralSetor" class="chart-tall"></div>
       </div>
       <div class="card">
@@ -684,9 +690,28 @@ function renderGeral() {
   };
   Plotly.newPlot('chartGeralLinha', [traceLinha], baseLayout(), { displayModeBar: false, responsive: true });
 
-  // Saldo por Setor — barras horizontais, última data do período
-  const setores = Object.keys(DATA.evolucao_geral.por_setor)
-    .map(s => ({ setor: s, valor: DATA.evolucao_geral.por_setor[s][DATA.evolucao_geral.datas.length - 1] }))
+  renderSetor();
+}
+
+// Saldo por Setor — barras horizontais, última data disponível.
+// Fica em funcao propria porque o botao kg/Unidade redesenha so este grafico.
+let medidaSetor = 'kg';
+
+function renderSetor() {
+  const un = medidaSetor === 'un';
+  const fonte = un
+    ? (DATA.evolucao_geral.por_setor_un || DATA.evolucao_geral.por_setor)
+    : DATA.evolucao_geral.por_setor;
+  const rotuloEixo = un ? 'unidades' : 'kg';
+  const ultimo = DATA.evolucao_geral.datas.length - 1;
+
+  const titulo = document.getElementById('setorTitle');
+  if (titulo) titulo.textContent = `Saldo por Setor (${rotuloEixo})`;
+
+  // A ordem e recalculada a cada troca: o setor mais pesado em kg nao e
+  // necessariamente o que tem mais unidades no deposito.
+  const setores = Object.keys(fonte)
+    .map(s => ({ setor: s, valor: fonte[s][ultimo] }))
     .sort((a, b) => b.valor - a.valor);
 
   const traceSetor = {
@@ -694,10 +719,10 @@ function renderGeral() {
     y: setores.map(s => s.setor),
     type: 'bar', orientation: 'h',
     marker: { color: resolveVar('--brand') },
-    text: setores.map(s => formatKg(s.valor)),
+    text: setores.map(s => formatMedida(s.valor, medidaSetor)),
     textposition: 'outside',
     textfont: { size: ROTULO_FONTE_BARRA },
-    hovertemplate: '%{y}: %{x:,.0f} kg<extra></extra>',
+    hovertemplate: `%{y}: %{x:,.0f} ${rotuloEixo}<extra></extra>`,
   };
   const layoutSetor = baseLayout();
   layoutSetor.yaxis.autorange = 'reversed';
@@ -707,6 +732,8 @@ function renderGeral() {
   layoutSetor.xaxis.range = [0, maxSetorValor * 1.18];
   Plotly.newPlot('chartGeralSetor', [traceSetor], layoutSetor, { displayModeBar: false, responsive: true });
 }
+
+ligarToggleUnidade('setorUnidade', m => { medidaSetor = m; renderSetor(); });
 
 const COB = DATA.cobertura || { por_sku: {}, mediana: null };
 const FX  = DATA.faixas_validade || { faixas: [], kg_7dias: 0, kg_30dias: 0 };

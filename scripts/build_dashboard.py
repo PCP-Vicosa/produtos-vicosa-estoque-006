@@ -135,6 +135,10 @@ def montar_evolucao_geral(df: pd.DataFrame) -> dict:
     datas = sorted(df["Data Estoque"].unique())
     total_por_dia = df.groupby("Data Estoque")["Saldo KG"].sum()
     setor_por_dia = df.groupby(["Setor", "Data Estoque"])["Saldo KG"].sum()
+    # Mesma serie em unidades, para o botao kg/Unidade do grafico "Saldo por
+    # Setor". Um setor pesado domina em kg e encolhe em unidade — sao duas
+    # leituras diferentes do mesmo saldo.
+    setor_por_dia_un = df.groupby(["Setor", "Data Estoque"])["Saldo Lote"].sum()
 
     setores = sorted(df["Setor"].unique())
     return {
@@ -142,6 +146,10 @@ def montar_evolucao_geral(df: pd.DataFrame) -> dict:
         "total_kg": [round(float(total_por_dia.get(d, 0)), 1) for d in datas],
         "por_setor": {
             setor: [round(float(setor_por_dia.get((setor, d), 0)), 1) for d in datas]
+            for setor in setores
+        },
+        "por_setor_un": {
+            setor: [int(setor_por_dia_un.get((setor, d), 0)) for d in datas]
             for setor in setores
         },
     }
