@@ -30,10 +30,10 @@ REPO_DIR = Path(__file__).resolve().parent.parent
 
 # Quanto tempo (em segundos) esperar sem nenhuma mudança nova antes de
 # efetivamente commitar. Evita ficar commitando no meio de uma edição.
-TEMPO_ESTAVEL = 15
+TEMPO_ESTAVEL = 5
 
 # De quanto em quanto tempo (em segundos) checar se há mudanças.
-INTERVALO_VERIFICACAO = 5
+INTERVALO_VERIFICACAO = 2
 
 
 def rodar(cmd):
