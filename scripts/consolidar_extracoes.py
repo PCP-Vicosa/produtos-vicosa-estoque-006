@@ -109,10 +109,20 @@ def consolidar_006() -> bool:
 
     df = pd.concat(partes, ignore_index=True)
 
+    # Rede de seguranca contra colunas auxiliares que porventura tenham sido
+    # gravadas na base por versoes anteriores desta rotina.
+    lixo = [c for c in df.columns if str(c).startswith("key_") or str(c).startswith("Unnamed:")]
+    if lixo:
+        df = df.drop(columns=lixo)
+        print(f"[006] coluna(s) auxiliar(es) removida(s) da base: {', '.join(map(str, lixo))}")
+
     # Mesmo dia em dois arquivos: fica o arquivo mais recente.
-    dono = (df.groupby(df["Data Estoque"].dt.normalize())["_mtime"]
-              .max().rename("_vencedor"))
-    df = df.join(dono, on=df["Data Estoque"].dt.normalize())
+    # Usamos map e nao join: o join com uma chave que nao e coluna do DataFrame
+    # deixava para tras uma coluna auxiliar "key_0", que ia parar dentro do
+    # BD_006.xlsx e quebrava a proxima execucao ("cannot insert key_0").
+    dia = df["Data Estoque"].dt.normalize()
+    dono = df.groupby(dia)["_mtime"].max()
+    df["_vencedor"] = dia.map(dono)
     descartadas = int((df["_mtime"] != df["_vencedor"]).sum())
     if descartadas:
         print(f"[006] {descartadas} linha(s) descartadas por haver extracao "
@@ -148,11 +158,22 @@ def arquivar_022() -> bool:
         return False
 
     HIST_022.mkdir(parents=True, exist_ok=True)
-    mais_recente = max(arquivos, key=lambda p: p.stat().st_mtime)
+
+    # A data do arquivo vem do NOME (BD_022 - DD-MM-AAAA). O mtime so entra como
+    # ultimo recurso: basta copiar a pasta, sincronizar o repositorio ou reabrir
+    # o arquivo para o mtime virar "hoje", e dois dias diferentes acabavam
+    # gravados no mesmo historico, um por cima do outro.
+    def data_de(p: Path) -> pd.Timestamp:
+        d = _data_do_nome(p)
+        if d is not None:
+            return d
+        return (pd.Timestamp(p.stat().st_mtime, unit="s", tz="UTC")
+                  .tz_convert("America/Sao_Paulo").normalize().tz_localize(None))
+
+    mais_recente = max(arquivos, key=data_de)
 
     for p in arquivos:
-        data = (pd.Timestamp(p.stat().st_mtime, unit="s", tz="UTC")
-                  .tz_convert("America/Sao_Paulo").strftime("%Y-%m-%d"))
+        data = data_de(p).strftime("%Y-%m-%d")
         destino = HIST_022 / f"BD_022_{data}.xlsx"
         shutil.copy2(p, destino)
         print(f"[022] {p.name} -> historico/{destino.name}")
